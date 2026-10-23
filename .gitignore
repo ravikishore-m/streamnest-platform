@@ -6,8 +6,13 @@ secrets.yaml
 secrets.yml
 **/secrets.yaml
 **/secrets.yml
-**/secrets/
-!**/.gitkeep
+# Allow SOPS-encrypted cluster secrets + docs under secrets/
+secrets/*
+!secrets/README.md
+!secrets/*.enc.yaml
+!secrets/*.enc.yml
+!secrets/*.example
+!secrets/*.enc.yaml.example
 *.pem
 *.key
 *.crt
