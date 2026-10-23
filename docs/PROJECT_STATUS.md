@@ -15,6 +15,8 @@ Live Jellyfin remains on the NAS app layer until an explicit cutover.
 - Privacy hygiene (D12): inventory out of Git; `SECURITY.md` + CI secret checks
 - `streamnest` VM running; k3s node **Ready**; qemu-guest-agent installed
 - Argo CD installed (server-side apply); all core pods Running
+- `streamnest-root` Synced/Healthy; `platform-smoke` Synced/Healthy (interim public image)
+- Media apps registered but **not** synced (manual until acceptance)
 - Guest admin path: virsh qemu-guest-agent from NAS (`/run/truenas_libvirt`)
 
 ## In Git (safe)
