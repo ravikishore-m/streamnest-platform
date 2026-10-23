@@ -17,10 +17,6 @@ spec:
       containers:
         - name: smoke
           image: {{ include "platform-smoke.image" . }}
-          {{- with .Values.image.args }}
-          args:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           ports:
             - containerPort: {{ .Values.service.port }}
               name: http

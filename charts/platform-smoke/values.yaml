@@ -4,16 +4,15 @@ image:
   repository: ghcr.io/stefanprodan/podinfo
   tag: "6.7.1"
   digest: ""
-  args:
-    - --port=8080
 probePath: /healthz
 service:
   type: ClusterIP
-  port: 8080
+  # podinfo default listen port
+  port: 9898
 resources:
   requests:
-    cpu: 10m
-    memory: 32Mi
-  limits:
-    cpu: 100m
+    cpu: 25m
     memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
