@@ -1,10 +1,9 @@
 image:
-  repository: registry.streamnest.lan:5000/streamnest/platform-smoke
-  tag: "latest"
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
   digest: ""
 service:
   type: NodePort
-  port: 8080
+  port: 9898
   nodePort: 30898
-imagePullSecrets:
-  - name: regcred
+imagePullSecrets: []

@@ -1,12 +1,13 @@
 replicaCount: 1
 image:
-  repository: registry.streamnest.lan:5000/streamnest/platform-smoke
-  tag: "latest"
+  # Public interim image until guest→NAS registry path is bridged
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
   digest: ""
 probePath: /healthz
 service:
   type: NodePort
-  port: 8080
+  port: 9898
   nodePort: 30898
 ingress:
   enabled: true
@@ -24,5 +25,4 @@ resources:
   limits:
     cpu: 200m
     memory: 128Mi
-imagePullSecrets:
-  - name: regcred
+imagePullSecrets: []
