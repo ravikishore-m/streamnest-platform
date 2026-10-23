@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Minimal HTTP smoke service for GHCR → Argo digest promotion proof."""
 
+import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+PORT = int(os.environ.get("PORT", "9898"))
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -22,4 +25,4 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+    HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

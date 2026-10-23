@@ -82,7 +82,9 @@ jobs:
             exit 1
           fi
 
+  # Custom image build (only services/platform-smoke — *arr/Jellyfin use upstream images).
   build-push:
+    name: build-push platform-smoke → GHCR
     needs: [helm, terraform, secrets-hygiene]
     if: >
       github.event_name == 'workflow_dispatch' ||
@@ -93,7 +95,6 @@ jobs:
       packages: write
     outputs:
       digest: ${{ steps.build.outputs.digest }}
-      tag: ${{ steps.meta.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -124,7 +125,7 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
 
-      - name: Pin image in GitOps values
+      - name: Pin image in GitOps values (Argo auto-syncs main)
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -146,6 +147,12 @@ jobs:
               "imagePullSecrets: []\n"
           )
           PY
+          {
+            echo "## platform-smoke build"
+            echo "- image: \`${IMAGE_NAME}:${TAG}\`"
+            echo "- digest: \`${DIGEST}\`"
+            echo "- Argo app \`platform-smoke\` auto-syncs from \`main\` (no NAS runner required)"
+          } >> "$GITHUB_STEP_SUMMARY"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/platform-smoke/values.yaml
@@ -156,6 +163,14 @@ jobs:
           git commit -m "chore(platform-smoke): pin ${TAG} [skip ci]"
           git push
 
+  # Keep legacy output name for any dependents
+  build-push:
+    name: build-push complete
+    needs: [build-push-ghcr]
+    if: needs.build-push-ghcr.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "GHCR digest ${{ needs.build-push-ghcr.outputs.digest }}"
   # Optional NAS-only ops (not on the hot path). Skipped unless requested.
   nas-seeds:
     needs: [helm, terraform, secrets-hygiene]
@@ -189,6 +204,7 @@ jobs:
           KUBECTL="${KUBECTL:-kubectl}" ./scripts/apply-seeds-to-k8s.sh
 
   # Optional: only on manual dispatch so push CI never queues on a missing NAS runner.
+  # Optional hard refresh when a NAS runner is online (Argo already auto-syncs Git).
   argo-refresh:
     needs: build-push
     if: github.event_name == 'workflow_dispatch'
