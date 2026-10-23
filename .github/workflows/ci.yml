@@ -188,11 +188,10 @@ jobs:
           chmod +x scripts/apply-seeds-to-k8s.sh
           KUBECTL="${KUBECTL:-kubectl}" ./scripts/apply-seeds-to-k8s.sh
 
+  # Optional: only on manual dispatch so push CI never queues on a missing NAS runner.
   argo-refresh:
     needs: build-push
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    if: github.event_name == 'workflow_dispatch'
     runs-on: [self-hosted, streamnest]
     continue-on-error: true
     steps:
