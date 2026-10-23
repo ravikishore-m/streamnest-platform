@@ -163,14 +163,6 @@ jobs:
           git commit -m "chore(platform-smoke): pin ${TAG} [skip ci]"
           git push
 
-  # Keep legacy output name for any dependents
-  build-push:
-    name: build-push complete
-    needs: [build-push-ghcr]
-    if: needs.build-push-ghcr.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "GHCR digest ${{ needs.build-push-ghcr.outputs.digest }}"
   # Optional NAS-only ops (not on the hot path). Skipped unless requested.
   nas-seeds:
     needs: [helm, terraform, secrets-hygiene]
