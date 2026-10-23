@@ -1,0 +1,66 @@
+# Secrets and credentials
+.env
+.env.*
+!.env.example
+**/secrets/
+!**/.gitkeep
+*.pem
+*.key
+*.crt
+!*.example.crt
+kubeconfig*
+**/kubeconfig.yaml
+id_rsa*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+.terraform.lock.hcl.bak
+*.tfvars
+!*.tfvars.example
+
+# Ansible
+*.retry
+.vault_pass
+.vault_pass.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Runtime / media / logs (never commit)
+*.log
+logs/
+media/
+Movies/
+TV/
+Music/
+Downloads/
+*.db
+*.sqlite
+*.sqlite3
+
+# Build artifacts
+dist/
+build/
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# SBOMs / scan reports may be large; keep summaries only unless requested
+**/trivy-report.json
+**/syft-sbom.json

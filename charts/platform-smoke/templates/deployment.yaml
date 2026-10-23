@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-platform-smoke
+  labels:
+    app.kubernetes.io/name: platform-smoke
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: platform-smoke
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: platform-smoke
+    spec:
+      containers:
+        - name: smoke
+          image: {{ include "platform-smoke.image" . }}
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

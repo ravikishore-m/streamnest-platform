@@ -1,0 +1,47 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+      - name: Helm lint charts
+        run: |
+          set -euo pipefail
+          for c in charts/*; do
+            [ -f "$c/Chart.yaml" ] || continue
+            helm lint "$c"
+          done
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+      - name: Terraform fmt + validate
+        run: |
+          set -euo pipefail
+          terraform fmt -check -recursive infrastructure/terraform
+          for env in staging production; do
+            cd "infrastructure/terraform/environments/$env"
+            terraform init -backend=false -input=false
+            terraform validate
+            cd -
+          done

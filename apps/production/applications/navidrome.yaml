@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-navidrome
+  namespace: argocd
+  labels:
+    env: production
+    app: navidrome
+spec:
+  project: default
+  sources:
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      path: charts/navidrome
+      helm:
+        valueFiles:
+          - $values/apps/production/navidrome/values.yaml
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production-navidrome
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
+    # manual sync only

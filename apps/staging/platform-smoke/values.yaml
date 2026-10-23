@@ -1,0 +1,4 @@
+image:
+  repository: ghcr.io/REPLACE_ORG/platform-smoke
+  tag: "0.1.0"
+  digest: ""

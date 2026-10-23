@@ -1,0 +1,43 @@
+{{- if .Values.networkPolicy.enabled | default true }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "jellyfin.fullname" . }}
+  labels:
+    {{- include "jellyfin.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "jellyfin.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 8096
+        - protocol: TCP
+          port: 8920
+  egress:
+    # DNS
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Media metadata / artwork (tighten per environment)
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
+    # NFS to TrueNAS when media mounts enabled
+    {{- if or .Values.media.enabled .Values.downloads.enabled }}
+    - to:
+        - ipBlock:
+            cidr: {{ .Values.networkPolicy.nfsCidr | default "192.168.68.56/32" }}
+      ports:
+        - protocol: TCP
+          port: 2049
+    {{- end }}
+{{- end }}

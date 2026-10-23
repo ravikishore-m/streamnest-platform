@@ -1,0 +1,6 @@
+apiVersion: v2
+name: platform-smoke
+description: Minimal custom image workload to prove GHCR build→digest→Argo promotion
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

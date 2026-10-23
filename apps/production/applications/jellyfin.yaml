@@ -1,0 +1,28 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: production-jellyfin
+  namespace: argocd
+  labels:
+    env: production
+    app: jellyfin
+spec:
+  project: default
+  sources:
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      path: charts/jellyfin
+      helm:
+        valueFiles:
+          - $values/apps/production/jellyfin/values.yaml
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production-jellyfin
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+
+    # manual sync only

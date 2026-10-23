@@ -1,0 +1,2 @@
+# Production values for qbittorrent.
+# Promote ONLY the digest validated in staging. Do not auto-sync until Phase 12 gates pass.

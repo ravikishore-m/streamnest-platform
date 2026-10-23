@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jellyfin.fullname" . }}
+  labels:
+    {{- include "jellyfin.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    {{- toYaml .Values.strategy | nindent 4 }}
+  selector:
+    matchLabels:
+      {{- include "jellyfin.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "jellyfin.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "jellyfin.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: jellyfin
+          image: {{ include "jellyfin.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8096
+              protocol: TCP
+            - name: https
+              containerPort: 8920
+              protocol: TCP
+          env:
+            - name: JELLYFIN_PublishedServerUrl
+              value: {{ .Values.publishedServerUrl | default "" | quote }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /config
+            - name: cache
+              mountPath: /cache
+            - name: transcodes
+              mountPath: /config/transcodes
+            {{- if .Values.media.enabled }}
+            - name: media
+              mountPath: {{ .Values.media.mountPath }}
+              readOnly: {{ .Values.media.readOnly }}
+            {{- end }}
+            {{- if .Values.downloads.enabled }}
+            - name: downloads
+              mountPath: {{ .Values.downloads.mountPath }}
+              readOnly: {{ .Values.downloads.readOnly }}
+            {{- end }}
+          {{- with .Values.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: {{ include "jellyfin.fullname" . }}-config
+        - name: cache
+          persistentVolumeClaim:
+            claimName: {{ include "jellyfin.fullname" . }}-cache
+        - name: transcodes
+          persistentVolumeClaim:
+            claimName: {{ include "jellyfin.fullname" . }}-transcodes
+        {{- if .Values.media.enabled }}
+        - name: media
+          nfs:
+            server: {{ .Values.media.nfs.server | quote }}
+            path: {{ .Values.media.nfs.path | quote }}
+            readOnly: {{ .Values.media.readOnly }}
+        {{- end }}
+        {{- if .Values.downloads.enabled }}
+        - name: downloads
+          nfs:
+            server: {{ .Values.downloads.nfs.server | quote }}
+            path: {{ .Values.downloads.nfs.path | quote }}
+            readOnly: {{ .Values.downloads.readOnly }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 60

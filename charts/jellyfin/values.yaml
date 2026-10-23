@@ -1,0 +1,137 @@
+# Default values — override per environment under apps/*/jellyfin/
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/jellyfin/jellyfin
+  # Pin both tag and digest for promotion. Staging digest recorded after pull/scan.
+  tag: "12.2"
+  digest: "sha256:c3efa69a22f2691fc88d6bb035e87a8560e395a6047f062fb381c61c3185e8f5"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+# Deployment: config on PVC; media via NFS. Single replica — Jellyfin is not HA-active-active.
+replicaCount: 1
+
+strategy:
+  type: Recreate
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+podSecurityContext:
+  fsGroup: 568
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 568
+  runAsGroup: 568
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+service:
+  type: ClusterIP
+  port: 8096
+  httpsPort: 8920
+
+ingress:
+  enabled: false
+  className: ""
+  hosts: []
+  tls: []
+
+resources:
+  requests:
+    cpu: "500m"
+    memory: 1Gi
+  limits:
+    cpu: "4"
+    memory: 4Gi
+
+# Software encode in staging; no /dev/dri until passthrough ADR.
+hardwareAcceleration:
+  enabled: false
+  # hostPath: /dev/dri
+
+persistence:
+  config:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+  cache:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 30Gi
+  transcodes:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 20Gi
+
+# Media from TrueNAS NFS — path must be a dedicated export, not live App config.
+media:
+  enabled: false
+  readOnly: true
+  nfs:
+    server: "192.168.68.56"
+    path: "/mnt/Skyhawk_8TB_HDD/Media"
+  mountPath: /media
+
+downloads:
+  enabled: false
+  readOnly: false
+  nfs:
+    server: "192.168.68.56"
+    path: "/mnt/Skyhawk_8TB_HDD/Downloads"
+  mountPath: /downloads
+
+env: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 5
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 6
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  failureThreshold: 30
+  periodSeconds: 10
+
+networkPolicy:
+  enabled: true
+  nfsCidr: "192.168.68.56/32"
+
+publishedServerUrl: ""

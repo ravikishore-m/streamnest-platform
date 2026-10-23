@@ -1,0 +1,26 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/home-operations/radarr
+  tag: "6.4.4.10685"
+  digest: "sha256:1902ad2c08e9bac276ff9a1429af2eaa2f3c635a51f138f1b3eb734995171537"
+service:
+  type: ClusterIP
+  port: 7878
+configMountPath: /config
+persistence:
+  size: 5Gi
+  storageClass: ""
+probes:
+  enabled: true
+  path: /ping
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+extraVolumes: []
+extraVolumeMounts: []
+nameOverride: ""
+fullnameOverride: ""

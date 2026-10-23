@@ -1,0 +1,2 @@
+# Production values for platform-smoke.
+# Promote ONLY the digest validated in staging. Do not auto-sync until Phase 12 gates pass.

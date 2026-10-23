@@ -1,0 +1,26 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/home-operations/qbittorrent
+  tag: "5.3.0"
+  digest: "sha256:faa37907a4242c6c3c5fdd3f7ea95e0c2308534406f4d606ba64d816e764d39f"
+service:
+  type: ClusterIP
+  port: 8080
+configMountPath: /config
+persistence:
+  size: 5Gi
+  storageClass: ""
+probes:
+  enabled: true
+  path: /
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+extraVolumes: []
+extraVolumeMounts: []
+nameOverride: ""
+fullnameOverride: ""

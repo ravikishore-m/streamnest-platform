@@ -1,0 +1,26 @@
+replicaCount: 1
+image:
+  repository: ghcr.io/home-operations/prowlarr
+  tag: "2.6.5.5623"
+  digest: ""  # set before deploy
+service:
+  type: ClusterIP
+  port: 9696
+configMountPath: /config
+persistence:
+  size: 5Gi
+  storageClass: ""
+probes:
+  enabled: true
+  path: /ping
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi
+extraVolumes: []
+extraVolumeMounts: []
+nameOverride: ""
+fullnameOverride: ""

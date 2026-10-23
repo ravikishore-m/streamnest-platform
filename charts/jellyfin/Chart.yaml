@@ -1,0 +1,11 @@
+apiVersion: v2
+name: jellyfin
+description: Jellyfin media server (official upstream image) for Velora platform
+type: application
+version: 0.1.0
+appVersion: "12.2"
+keywords:
+  - jellyfin
+  - media
+maintainers:
+  - name: platform
