@@ -21,3 +21,14 @@ cluster:
 
 git:
   repo_url: "https://github.com/OWNER/streamnest-platform.git"
+
+# One-way seed from live TrueNAS Apps (never write back to live paths)
+seeds:
+  nas_config_root: "/path/to/configs"
+  nas_seed_root: "/path/to/configs/streamnest-seeds"
+  nas_nfs_server: "NAS_HOST"
+
+registry:
+  host: "NAS_HOST:5000"
+  username: "streamnest-robot"
+  # password only in SOPS / env — not here

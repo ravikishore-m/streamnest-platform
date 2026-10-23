@@ -50,12 +50,20 @@ jobs:
       - name: Block secret filenames and obvious inventory
         run: |
           set -euo pipefail
-          if git ls-files | grep -E '(^|/)\.env$|(^|/)secrets\.ya?ml$|\.tfstate$|kubeconfig|(^|/)config/local\.ya?ml$'; then
-            echo "Forbidden secret-like paths are tracked" >&2
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)secrets\.ya?ml$|\.tfstate$|kubeconfig|(^|/)config/local\.ya?ml$|(^|/)config/local/age\.key$'; then
+            echo "Forbidden plaintext secret-like paths are tracked" >&2
             exit 1
           fi
-          # Fail if private RFC1918-looking literals sneak into tracked docs/charts
-          if git grep -nE '192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|100\.[0-9]+\.[0-9]+\.[0-9]+' -- '*.md' '*.yaml' '*.yml' '*.tf' '*.sh' ':!.github/**' 2>/dev/null; then
+          for f in $(git ls-files 'secrets/*' 2>/dev/null || true); do
+            case "$f" in
+              secrets/README.md|secrets/*.example|*.enc.yaml|*.enc.yml) continue ;;
+            esac
+            if [[ "$f" == *.yaml || "$f" == *.yml ]] && ! grep -q 'sops:' "$f"; then
+              echo "Unencrypted file under secrets/: $f" >&2
+              exit 1
+            fi
+          done
+          if git grep -nE '192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|100\.[0-9]+\.[0-9]+\.[0-9]+' -- '*.md' '*.yaml' '*.yml' '*.tf' '*.sh' ':!.github/**' ':!secrets/**' 2>/dev/null; then
             echo "Private IP literals must not be committed" >&2
             exit 1
           fi

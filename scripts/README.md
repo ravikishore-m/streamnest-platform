@@ -1,5 +1,11 @@
 # Scripts
 
-Site-specific provision/ops scripts belong in `scripts/local/` (gitignored).
+| Script | Where | Purpose |
+|--------|-------|---------|
+| `replicate-nas-seeds.sh` | NAS | One-way live TrueNAS Apps configs → `streamnest-seeds/` (never writes live) |
+| `apply-seeds-to-k8s.sh` | NAS + kubectl | Seed NFS → k8s PVCs |
+| `apply-sops-secrets.sh` | ops machine | Decrypt SOPS → regcred + Argo admin hash |
+| `ci-build-push-deploy.sh` | NAS / runner | Build → push → Argo refresh |
+| `nas-build-platform-smoke.sh` | NAS | Smoke image only |
 
-Do not commit hostnames, IPs, pool paths, or credentials.
+Site paths/IPs via env or `config/local.yaml` — not committed.

@@ -24,10 +24,18 @@ See `docs/architecture/decisions.md` and `docs/PROJECT_STATUS.md`.
 ## Layout
 
 ```text
-apps/             # Argo Applications + values (no secrets)
+apps/             # Argo Applications + values (no plaintext secrets)
 charts/           # jellyfin, seerr, *arr, platform-smoke
+platform/argocd/  # AppProject + RBAC + server params
+secrets/          # SOPS-encrypted *.enc.yaml only
 config/           # local.example.yaml only; local.yaml ignored
 infrastructure/   # terraform + ansible (placeholders)
 services/         # custom images (e.g. platform-smoke)
+scripts/          # seed (read-only from live NAS Apps), CI deploy, SOPS apply
 docs/             # public ADRs/architecture (sanitized)
 ```
+
+## Pipeline
+
+GitHub Actions `pipeline` (self-hosted `streamnest` runner): validate → build/push custom images → Argo refresh.  
+One-way config seed from live TrueNAS Apps is optional (`replicate_seeds` / `apply_seeds`) and **never writes** the original ix-* configs. See `docs/operations/parallel-seed-and-pipeline.md`.

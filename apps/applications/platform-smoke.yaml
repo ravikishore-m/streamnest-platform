@@ -7,7 +7,7 @@ metadata:
     env: streamnest
     app: platform-smoke
 spec:
-  project: default
+  project: streamnest
   sources:
     - repoURL: https://github.com/ravikishore-m/streamnest-platform.git
       targetRevision: main

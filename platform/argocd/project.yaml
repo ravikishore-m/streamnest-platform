@@ -1,0 +1,57 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: streamnest
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: streamnest
+spec:
+  description: Streamnest single-env media platform
+  sourceRepos:
+    - "https://github.com/ravikishore-m/streamnest-platform.git"
+  destinations:
+    - namespace: argocd
+      server: https://kubernetes.default.svc
+    - namespace: jellyfin
+      server: https://kubernetes.default.svc
+    - namespace: sonarr
+      server: https://kubernetes.default.svc
+    - namespace: radarr
+      server: https://kubernetes.default.svc
+    - namespace: prowlarr
+      server: https://kubernetes.default.svc
+    - namespace: bazarr
+      server: https://kubernetes.default.svc
+    - namespace: qbittorrent
+      server: https://kubernetes.default.svc
+    - namespace: seerr
+      server: https://kubernetes.default.svc
+    - namespace: platform-smoke
+      server: https://kubernetes.default.svc
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+    - group: networking.k8s.io
+      kind: IngressClass
+    - group: storage.k8s.io
+      kind: StorageClass
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  roles:
+    - name: admin
+      description: Full sync/action on streamnest apps
+      policies:
+        - p, proj:streamnest:admin, applications, *, streamnest/*, allow
+        - p, proj:streamnest:admin, applications, *, */*, allow
+        - p, proj:streamnest:admin, repositories, *, *, allow
+        - p, proj:streamnest:admin, exec, *, streamnest/*, allow
+      groups:
+        - streamnest-admins
+    - name: readonly
+      description: Read-only view
+      policies:
+        - p, proj:streamnest:readonly, applications, get, streamnest/*, allow
+        - p, proj:streamnest:readonly, applications, get, */*, allow
+      groups:
+        - streamnest-readonly

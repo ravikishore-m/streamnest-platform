@@ -27,6 +27,7 @@ override.tf.json
 # Site-specific / personal (never commit)
 config/local.yaml
 config/local.yml
+config/local/
 **/values.local.yaml
 **/hosts.local.yml
 **/terraform.tfvars
@@ -36,6 +37,9 @@ docs/private/**
 scripts/local/
 .kube/
 **/k3s.yaml
+# SOPS age private key (public recipient stays in .sops.yaml)
+**/age.key
+*.agekey
 
 # Terraform
 .terraform/
@@ -79,3 +83,4 @@ venv/
 # Scan artifacts
 **/trivy-report.json
 **/syft-sbom.json
+.tools/

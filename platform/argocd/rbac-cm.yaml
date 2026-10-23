@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/component: server
+data:
+  # Local users / OIDC groups map into these roles.
+  # Bootstrap: admin account keeps built-in role:admin.
+  policy.default: role:readonly
+  policy.csv: |
+    # Platform admins — full Argo CD admin
+    g, streamnest-admins, role:admin
+    # Operators — sync/restart within streamnest project
+    g, streamnest-ops, role:streamnest-ops
+    p, role:streamnest-ops, applications, get, */*, allow
+    p, role:streamnest-ops, applications, sync, streamnest/*, allow
+    p, role:streamnest-ops, applications, action/*, streamnest/*, allow
+    p, role:streamnest-ops, applications, override, streamnest/*, allow
+    p, role:streamnest-ops, logs, get, streamnest/*, allow
+    p, role:streamnest-ops, exec, create, streamnest/*, allow
+    # Read-only viewers
+    g, streamnest-readonly, role:readonly
+  scopes: "[groups]"
