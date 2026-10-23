@@ -9,13 +9,13 @@ metadata:
 spec:
   project: default
   sources:
-    - repoURL: REPLACE_GIT_REPO_URL
+    - repoURL: https://github.com/ravikishore-m/streamnest-platform.git
       targetRevision: main
       path: charts/prowlarr
       helm:
         valueFiles:
           - $values/apps/prowlarr/values.yaml
-    - repoURL: REPLACE_GIT_REPO_URL
+    - repoURL: https://github.com/ravikishore-m/streamnest-platform.git
       targetRevision: main
       ref: values
   destination:

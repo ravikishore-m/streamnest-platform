@@ -1,6 +1,6 @@
 # Project status
 
-**Phase:** 2 (repo/CI) + Phase 3 partial (single-env VM; networking follow-up)  
+**Phase:** 3 bootstrap complete (single-env k3s + Argo CD); inbound LAN access still via workarounds  
 **Authorship:** no AI/agent `Co-authored-by` on commits  
 
 ## Topology
@@ -9,29 +9,38 @@
 
 Live Jellyfin remains on the NAS app layer until an explicit cutover.
 
+## Done
+
+- Single-env GitOps layout (`apps/`, charts, Terraform/Ansible shapes)
+- Privacy hygiene (D12): inventory out of Git; `SECURITY.md` + CI secret checks
+- `streamnest` VM running; k3s node **Ready**; qemu-guest-agent installed
+- Argo CD installed (server-side apply); all core pods Running
+- Guest admin path: virsh qemu-guest-agent from NAS (`/run/truenas_libvirt`)
+
 ## In Git (safe)
 
-- Helm charts and Argo app manifests with **placeholder** endpoints  
-- ADRs and architecture (no site inventory)  
-- Terraform/Ansible **shapes** with placeholders  
-- CI validate workflow  
+- Helm charts and Argo app manifests (repo URL set to public GitHub remote)
+- ADRs and architecture (no site inventory)
+- Terraform/Ansible **shapes** with placeholders
+- CI validate workflow
 
 ## Not in Git (private)
 
-- Hostnames, LAN/Tailscale IPs, MagicDNS  
-- Pool/dataset/zvol paths, disk models/serials  
-- SSH users/aliases, API keys, kubeconfigs, `secrets.yaml`  
-- Media library sizes and personal paths  
-- Agent/Telegram configuration  
+- Hostnames, LAN/Tailscale IPs, MagicDNS
+- Pool/dataset/zvol paths, disk models/serials
+- SSH users/aliases, API keys, kubeconfigs, `secrets.yaml`
+- Media library sizes and personal paths
+- Agent/Telegram configuration
 
 Use `config/local.yaml` (from `config/local.example.yaml`) and `docs/private/`.
 
-## Blocker
+## Networking note
 
-Guest VM inbound LAN access needs a host **bridge** (or Tailscale in-guest). Details in private runbook notes — public steps: `docs/operations/runbooks/streamnest-bridge-networking.md`.
+macvtap isolates guest from NAS host and blocks Mac→guest inbound. Guest egress to LAN/Internet works. Durable fix: TrueNAS **bridge** NIC (UI) or Tailscale-in-guest. Interim admin: guest-agent exec from NAS.
 
 ## Next
 
-1. Keep secrets and inventory out of Git.  
-2. Finish cluster admin access (bridge or Tailscale).  
-3. Verify `kubectl get nodes`, then Argo CD.
+1. Durable cluster admin access (bridge or Tailscale).
+2. Argo repo credentials if the GitHub remote is private; sync `streamnest-root`.
+3. Sync `platform-smoke` first; keep media apps manual until acceptance.
+4. Jellyfin cutover only after acceptance (NAS Apps stays live).
