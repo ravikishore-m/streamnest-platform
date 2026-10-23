@@ -1,4 +1,4 @@
-FROM public.ecr.aws/docker/library/python:3.12-alpine
+FROM docker.io/library/python:3.12-alpine
 RUN adduser -D -u 10001 smoke
 WORKDIR /app
 COPY server.py .
