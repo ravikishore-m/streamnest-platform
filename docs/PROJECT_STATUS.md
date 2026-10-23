@@ -3,6 +3,7 @@
 **Phase:** 1 — Architecture + parallel app scaffolding (in progress → awaiting Phase 3 provision approval)  
 **Updated:** 2026-10-23  
 **Host:** TrueNAS `26.0.0-BETA.3` @ `192.168.68.56`  
+**Git remote:** `https://github.com/ravikishore-m/streamnest-platform.git` (`main` pushed)  
 **Authorship rule:** **No Cursor/AI `Co-authored-by` on commits** (D10 — strict)
 
 ## Locked decisions
