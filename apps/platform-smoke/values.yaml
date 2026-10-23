@@ -1,7 +1,7 @@
 image:
   repository: ghcr.io/ravikishore-m/streamnest-platform-smoke
-  tag: "git-de2625378612"
-  digest: "sha256:cd7ada5f513b646633a7bb4d090a843a9cb2ab330ddfef826f92a6bb39596878"
+  tag: "git-a28facd3fcb7"
+  digest: "sha256:54d901d442a0c6dfd216c8aa9c1229b5eba2069631a362c07822e41a607f7d40"
 service:
   type: NodePort
   port: 9898
