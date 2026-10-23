@@ -1,7 +1,8 @@
 replicaCount: 1
 image:
-  repository: ghcr.io/REPLACE_ORG/platform-smoke
-  tag: "0.1.0"
+  # Interim public image until GHCR platform-smoke digests are published
+  repository: ghcr.io/stefanprodan/podinfo
+  tag: "6.7.1"
   digest: ""
 service:
   type: ClusterIP
