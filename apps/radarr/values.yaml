@@ -1,3 +1,15 @@
 # Staging values for radarr. Digests pinned in chart values; override here after scan.
 persistence:
   size: 5Gi
+
+service:
+  type: NodePort
+  nodePort: 30878
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: radarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix

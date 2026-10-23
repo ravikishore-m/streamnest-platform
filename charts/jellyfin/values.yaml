@@ -34,14 +34,19 @@ securityContext:
   readOnlyRootFilesystem: false
 
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8096
+  nodePort: 30096
   httpsPort: 8920
 
 ingress:
-  enabled: false
-  className: ""
-  hosts: []
+  enabled: true
+  className: traefik
+  hosts:
+    - host: jellyfin.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
   tls: []
 
 resources:

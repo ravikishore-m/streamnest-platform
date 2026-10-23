@@ -4,8 +4,9 @@ image:
   tag: "2.6.5.5623"
   digest: ""  # set before deploy
 service:
-  type: ClusterIP
+  type: NodePort
   port: 9696
+  nodePort: 30696
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: prowlarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

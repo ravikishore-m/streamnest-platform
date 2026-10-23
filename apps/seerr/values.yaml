@@ -1,3 +1,15 @@
 # Staging values for seerr. Digests pinned in chart values; override here after scan.
 persistence:
   size: 5Gi
+
+service:
+  type: NodePort
+  nodePort: 30055
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: seerr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix

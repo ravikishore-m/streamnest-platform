@@ -14,6 +14,10 @@ spec:
       labels:
         app.kubernetes.io/name: platform-smoke
     spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: smoke
           image: {{ include "platform-smoke.image" . }}

@@ -25,7 +25,7 @@ See `docs/architecture/decisions.md` and `docs/PROJECT_STATUS.md`.
 
 ```text
 apps/             # Argo Applications + values (no secrets)
-charts/           # jellyfin, seerr, *arr, navidrome, platform-smoke
+charts/           # jellyfin, seerr, *arr, platform-smoke
 config/           # local.example.yaml only; local.yaml ignored
 infrastructure/   # terraform + ansible (placeholders)
 services/         # custom images (e.g. platform-smoke)

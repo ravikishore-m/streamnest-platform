@@ -1,6 +1,0 @@
-apiVersion: v2
-name: navidrome
-description: navidrome for Velora k8s platform (parallel staging track)
-type: application
-version: 0.1.0
-appVersion: "0.64.2"

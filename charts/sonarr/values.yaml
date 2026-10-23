@@ -4,8 +4,9 @@ image:
   tag: "5.0.0.2742"
   digest: "sha256:491f13c731083c1e3a5eb707750ad61f0052a5a6c12b37f6f524eaa35664915d"
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8989
+  nodePort: 30989
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: sonarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

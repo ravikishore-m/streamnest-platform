@@ -1,3 +1,15 @@
 # Staging values for bazarr. Digests pinned in chart values; override here after scan.
 persistence:
   size: 5Gi
+
+service:
+  type: NodePort
+  nodePort: 30767
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: bazarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix

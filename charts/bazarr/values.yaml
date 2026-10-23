@@ -4,8 +4,9 @@ image:
   tag: "1.6.2"
   digest: ""  # set before deploy
 service:
-  type: ClusterIP
+  type: NodePort
   port: 6767
+  nodePort: 30767
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: bazarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

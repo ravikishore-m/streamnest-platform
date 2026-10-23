@@ -14,3 +14,15 @@ resources:
     cpu: "2"
     memory: 2Gi
 publishedServerUrl: ""
+
+service:
+  type: NodePort
+  nodePort: 30096
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: jellyfin.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix

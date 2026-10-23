@@ -4,8 +4,9 @@ image:
   tag: "5.3.0"
   digest: "sha256:faa37907a4242c6c3c5fdd3f7ea95e0c2308534406f4d606ba64d816e764d39f"
 service:
-  type: ClusterIP
+  type: NodePort
   port: 8080
+  nodePort: 30080
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: qbittorrent.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

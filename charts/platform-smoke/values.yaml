@@ -1,14 +1,22 @@
 replicaCount: 1
 image:
-  # Interim public image until GHCR platform-smoke digests are published
-  repository: ghcr.io/stefanprodan/podinfo
-  tag: "6.7.1"
+  repository: registry.streamnest.lan:5000/streamnest/platform-smoke
+  tag: "latest"
   digest: ""
 probePath: /healthz
 service:
-  type: ClusterIP
-  # podinfo default listen port
-  port: 9898
+  type: NodePort
+  port: 8080
+  nodePort: 30898
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: platform-smoke.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
 resources:
   requests:
     cpu: 25m
@@ -16,3 +24,5 @@ resources:
   limits:
     cpu: 200m
     memory: 128Mi
+imagePullSecrets:
+  - name: regcred

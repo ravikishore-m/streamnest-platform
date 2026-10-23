@@ -1,15 +1,10 @@
 image:
-  # Interim public image until GHCR platform-smoke digests are published
-  repository: ghcr.io/stefanprodan/podinfo
-  tag: "6.7.1"
+  repository: registry.streamnest.lan:5000/streamnest/platform-smoke
+  tag: "latest"
   digest: ""
-probePath: /healthz
 service:
-  port: 9898
-resources:
-  requests:
-    cpu: 25m
-    memory: 64Mi
-  limits:
-    cpu: 200m
-    memory: 128Mi
+  type: NodePort
+  port: 8080
+  nodePort: 30898
+imagePullSecrets:
+  - name: regcred

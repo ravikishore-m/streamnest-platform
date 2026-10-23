@@ -4,8 +4,9 @@ image:
   tag: "6.4.4.10685"
   digest: "sha256:1902ad2c08e9bac276ff9a1429af2eaa2f3c635a51f138f1b3eb734995171537"
 service:
-  type: ClusterIP
+  type: NodePort
   port: 7878
+  nodePort: 30878
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: radarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

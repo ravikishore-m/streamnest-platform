@@ -1,3 +1,15 @@
 # Staging values for sonarr. Digests pinned in chart values; override here after scan.
 persistence:
   size: 5Gi
+
+service:
+  type: NodePort
+  nodePort: 30989
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: sonarr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix

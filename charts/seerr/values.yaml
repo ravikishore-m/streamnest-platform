@@ -4,8 +4,9 @@ image:
   tag: "v3.5.1"
   digest: "sha256:d8fab675b55ad293ded98fd71efcfd46054cbad9746534ae1cc4794a88c0b3be"
 service:
-  type: ClusterIP
+  type: NodePort
   port: 5055
+  nodePort: 30055
 configMountPath: /config
 persistence:
   size: 5Gi
@@ -24,3 +25,13 @@ extraVolumes: []
 extraVolumeMounts: []
 nameOverride: ""
 fullnameOverride: ""
+
+ingress:
+  enabled: true
+  className: traefik
+  hosts:
+    - host: seerr.streamnest.lan
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
