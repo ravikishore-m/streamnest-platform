@@ -39,9 +39,23 @@ jobs:
         run: |
           set -euo pipefail
           terraform fmt -check -recursive infrastructure/terraform
-          for env in staging production; do
-            cd "infrastructure/terraform/environments/$env"
-            terraform init -backend=false -input=false
-            terraform validate
-            cd -
-          done
+          cd infrastructure/terraform/environments/streamnest
+          terraform init -backend=false -input=false
+          terraform validate
+
+  secrets-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block secret filenames and obvious inventory
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)secrets\.ya?ml$|\.tfstate$|kubeconfig|(^|/)config/local\.ya?ml$'; then
+            echo "Forbidden secret-like paths are tracked" >&2
+            exit 1
+          fi
+          # Fail if private RFC1918-looking literals sneak into tracked docs/charts
+          if git grep -nE '192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|100\.[0-9]+\.[0-9]+\.[0-9]+' -- '*.md' '*.yaml' '*.yml' '*.tf' '*.sh' ':!.github/**' 2>/dev/null; then
+            echo "Private IP literals must not be committed" >&2
+            exit 1
+          fi

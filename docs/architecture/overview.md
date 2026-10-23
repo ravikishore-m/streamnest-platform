@@ -2,44 +2,38 @@
 
 ## Physical
 
-Single TrueNAS host (i9-12900K, 31 GiB RAM, Skyhawk media, WD SSD apps/VMs, Toshiba backups). **Not physically highly available.**
+Single NAS host running TrueNAS with a dedicated Linux VM for k3s. **Not physically highly available.** Hardware and addressing details are private.
 
-## Logical (approved Topology A)
+## Logical
 
 ```mermaid
 flowchart TB
-  subgraph host [TrueNAS_BETA]
-    LiveJF[Live_Jellyfin_App_QSV]
-    LiveArr[Live_arr_Seerr_stack]
-    OACP[OpenACP]
-    Media[(Skyhawk_Media)]
-    SSD[(WD_SSD)]
-    Toshiba[(Toshiba_Backup)]
-    subgraph vms [Linux_VMs]
-      ProdVM[k3s-prod]
-      StageVM[k3s-staging_idle_off]
+  subgraph host [NAS_Host]
+    LiveJF[Live_Jellyfin_App]
+    LiveArr[Live_arr_stack]
+    Media[(Media_Pool)]
+    SSD[(Config_SSD_Pool)]
+    Backup[(Backup_Pool)]
+    subgraph vm [k3s_VM_streamnest]
+      K3S[k3s_single_node]
     end
   end
 
-  subgraph gitops [Git_this_repo]
-    Charts[charts_jellyfin_and_stack]
-    AppsS[apps_staging]
-    AppsP[apps_production]
+  subgraph gitops [Git_repo]
+    Charts[charts]
+    Apps[apps]
   end
 
   LiveJF --> Media
   LiveArr --> Media
-  StageVM -->|parallel_staging_apps| Charts
-  ProdVM -->|after_gates| Charts
-  AppsS --> StageVM
-  AppsP --> ProdVM
-  SSD --> vms
-  Toshiba -.->|replication_planned| SSD
+  Apps --> K3S
+  Charts --> Apps
+  Backup -.->|planned_replication| SSD
 ```
 
 ## Parallel tracks
 
-1. **Platform:** Terraform VMs → Ansible k3s → Argo CD → Vault → observability.  
-2. **Apps:** Helm charts + staging Argo Applications for Jellyfin, Seerr, *arr, qBittorrent, Navidrome, platform-smoke — developed now; reconcile when staging cluster is up.
+1. Platform: VM → k3s → Argo CD → Vault → observability  
+2. Apps: Helm charts for Jellyfin and related services on the single cluster  
 
-Live Apps keep serving clients until cutover approval.
+Live NAS Apps serve users until cutover approval.

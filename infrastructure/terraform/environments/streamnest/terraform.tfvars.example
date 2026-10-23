@@ -1,0 +1,3 @@
+# Copy to terraform.tfvars (gitignored)
+zvol_name  = "CONFIG_POOL/vms/streamnest-disk"
+nic_attach = "NIC_OR_BRIDGE"

@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bazarr
+  namespace: argocd
+  labels:
+    env: streamnest
+    app: bazarr
+spec:
+  project: default
+  sources:
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      path: charts/bazarr
+      helm:
+        valueFiles:
+          - $values/apps/bazarr/values.yaml
+    - repoURL: REPLACE_GIT_REPO_URL
+      targetRevision: main
+      ref: values
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bazarr
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    # Manual sync until acceptance gates pass

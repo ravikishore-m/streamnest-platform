@@ -35,7 +35,7 @@ spec:
     {{- if or .Values.media.enabled .Values.downloads.enabled }}
     - to:
         - ipBlock:
-            cidr: {{ .Values.networkPolicy.nfsCidr | default "192.168.68.56/32" }}
+            cidr: {{ .Values.networkPolicy.nfsCidr | quote }}
       ports:
         - protocol: TCP
           port: 2049

@@ -40,7 +40,7 @@ variable "autostart" {
 
 variable "zvol_name" {
   type        = string
-  description = "Existing or managed zvol full name, e.g. WD_Black_1TB_SSD/vms/k3s-staging-disk"
+  description = "Existing or managed zvol full name (set via private tfvars; do not commit real paths)"
 }
 
 variable "nic_attach" {

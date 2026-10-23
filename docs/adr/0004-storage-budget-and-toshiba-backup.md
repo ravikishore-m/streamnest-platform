@@ -1,39 +1,20 @@
-# ADR 0004 — WD SSD budget and Toshiba backup destination
+# ADR 0004 — SSD budget and separate backup destination
 
 ## Status
 
-Accepted (2026-10-23)
+Accepted; sanitized (pool names private — D12)
 
 ## Context
 
-WD Black SN850X pool has ~867 GiB free and already holds ix-apps, configs, OpenACP, and a 64G k3s zvol. No independent backup destination existed (no replication/cloudsync/periodic snapshots). Toshiba_HDD_1TB is nearly empty.
+App/VM data should live on fast SSD-backed storage. Media stays on the bulk media pool. An independent backup destination is required (snapshots alone are not DR).
 
 ## Decision
 
-### WD SSD allocation (design — create in Phase 3 after approval)
-
-| Dataset / zvol | Purpose | Quota guidance |
-|----------------|---------|----------------|
-| `WD_Black_1TB_SSD/vms/k3s-prod-disk` | Prod VM disk | 80–100 GiB volsize |
-| `WD_Black_1TB_SSD/vms/k3s-staging-disk` | Staging VM disk | 64 GiB volsize |
-| `WD_Black_1TB_SSD/k8s/staging` | Staging PV backends / exports as needed | Quota ≤ 100 GiB |
-| `WD_Black_1TB_SSD/k8s/production` | Prod PV backends | Quota ≤ 150 GiB |
-| Existing `configs/`, `ix-apps/`, `openacp/` | Unchanged until cutovers | Do not delete |
-
-Do not give Kubernetes the entire SSD. Cap observability retention on cluster disks.
-
-### Backup
-
-- **Primary independent target:** `Toshiba_HDD_1TB` for replicated/copied configs, Terraform state exports, Vault snapshots, and Jellyfin metadata backups.  
-- Enable **periodic ZFS snapshots** on critical WD datasets (configs, k8s datasets) with retention policy.  
-- Snapshots alone are not DR; verify Toshiba receive/replication before claiming DR complete.  
-- Cloud offsite: deferred.
+1. Allocate SSD capacity with **quotas** for VM disks and k8s PVCs; keep contingency free space.  
+2. Do not put the media library in container images or on the OS boot device.  
+3. Use a **separate backup pool/disk** for config/metadata/state backups (exact dataset names in `config/local.yaml` / private docs only).  
+4. Enable periodic snapshots on critical datasets; verify restore before cutover.
 
 ## Consequences
 
-- Clear capacity guardrails for Phase 3 provisioning.  
-- Toshiba becomes critical; monitor health before relying on it.
-
-## Security / recovery
-
-Backup datasets restricted; no secrets in unencrypted world-readable shares. Test restore of Jellyfin config + a sample PVC before production cutover.
+Clear guardrails without publishing site topology. Operators must not commit real pool paths.

@@ -1,0 +1,16 @@
+# Local NFS overrides belong in values.local.yaml (gitignored), not here.
+media:
+  enabled: false
+  readOnly: true
+downloads:
+  enabled: false
+hardwareAcceleration:
+  enabled: false
+resources:
+  requests:
+    cpu: "250m"
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 2Gi
+publishedServerUrl: ""

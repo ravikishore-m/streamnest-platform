@@ -1,18 +1,13 @@
-# Default values — override per environment under apps/*/jellyfin/
-
 nameOverride: ""
 fullnameOverride: ""
 
 image:
   repository: ghcr.io/jellyfin/jellyfin
-  # Pin both tag and digest for promotion. Staging digest recorded after pull/scan.
   tag: "12.2"
-  digest: "sha256:c3efa69a22f2691fc88d6bb035e87a8560e395a6047f062fb381c61c3185e8f5"
+  digest: ""  # set after pull/scan — never commit mutable latest
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
-
-# Deployment: config on PVC; media via NFS. Single replica — Jellyfin is not HA-active-active.
 replicaCount: 1
 
 strategy:
@@ -57,10 +52,8 @@ resources:
     cpu: "4"
     memory: 4Gi
 
-# Software encode in staging; no /dev/dri until passthrough ADR.
 hardwareAcceleration:
   enabled: false
-  # hostPath: /dev/dri
 
 persistence:
   config:
@@ -82,25 +75,24 @@ persistence:
       - ReadWriteOnce
     size: 20Gi
 
-# Media from TrueNAS NFS — path must be a dedicated export, not live App config.
+# Site-specific NFS: override in gitignored local values only
 media:
   enabled: false
   readOnly: true
   nfs:
-    server: "192.168.68.56"
-    path: "/mnt/Skyhawk_8TB_HDD/Media"
+    server: "NAS_NFS_SERVER"
+    path: "/MEDIA_EXPORT_PATH"
   mountPath: /media
 
 downloads:
   enabled: false
   readOnly: false
   nfs:
-    server: "192.168.68.56"
-    path: "/mnt/Skyhawk_8TB_HDD/Downloads"
+    server: "NAS_NFS_SERVER"
+    path: "/DOWNLOADS_EXPORT_PATH"
   mountPath: /downloads
 
 env: []
-
 nodeSelector: {}
 tolerations: []
 affinity: {}
@@ -132,6 +124,6 @@ startupProbe:
 
 networkPolicy:
   enabled: true
-  nfsCidr: "192.168.68.56/32"
+  nfsCidr: "NAS_NFS_CIDR"
 
 publishedServerUrl: ""

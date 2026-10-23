@@ -1,38 +1,33 @@
-# Media Streaming Platform
+# Streamnest Platform
 
-Enterprise-style self-hosted streaming platform on TrueNAS + k3s (Terraform, Ansible, Helm, Argo CD, Vault, GitHub Actions / GHCR).
+Self-hosted streaming platform on TrueNAS + **single-env** k3s.
 
-**Phase:** Architecture + **parallel** Kubernetes app charts for Jellyfin and the streaming stack. Live TrueNAS Apps are untouched until staging proof and cutover approval.
+## Privacy (strict)
 
-## Strict git rule
+Do **not** commit:
 
-Commits must **not** list Cursor or any AI agent as `Co-authored-by`. See `CONTRIBUTING.md`.
+- Personal names, emails, Telegram IDs, or account handles beyond the public Git remote  
+- LAN/VPN IPs, MagicDNS names, SSH aliases, or usernames  
+- Pool/dataset/zvol paths, disk serials, or media library details  
+- API keys, kubeconfigs, `secrets.yaml`, or Terraform state  
+
+Use `config/local.example.yaml` → `config/local.yaml` (gitignored) and `docs/private/` for site data.
 
 ## Decisions
 
-[`docs/architecture/decisions.md`](docs/architecture/decisions.md) · [`docs/PROJECT_STATUS.md`](docs/PROJECT_STATUS.md)
+See `docs/architecture/decisions.md` and `docs/PROJECT_STATUS.md`.
 
-## Parallel app track
+- One k3s environment (`streamnest`)  
+- Live Jellyfin stays on NAS Apps until cutover  
+- No AI/agent commit co-authors  
 
-| Chart | Role |
-|-------|------|
-| `charts/jellyfin` | Official Jellyfin image by digest; staging software encode |
-| `charts/seerr` | Requests |
-| `charts/sonarr` / `radarr` / `prowlarr` / `bazarr` | *arr |
-| `charts/qbittorrent` | Downloads client |
-| `charts/navidrome` | Music |
-| `charts/platform-smoke` | Custom GHCR promotion proof |
+## Layout
 
-GitOps: `apps/staging/applications/*`, `apps/production/applications/*` (manual sync until gates pass).
-
-## Related live systems
-
-- TrueNAS Apps Jellyfin (QSV) — production traffic today  
-- OpenACP Telegram agent on WD SSD  
-- Existing tooling: `~/truenas-arr`  
-
-## Do not
-
-- Apply Terraform without Phase 3 approval  
-- Point staging at live Jellyfin config paths  
-- Cut over clients until staging acceptance is signed off  
+```text
+apps/             # Argo Applications + values (no secrets)
+charts/           # jellyfin, seerr, *arr, navidrome, platform-smoke
+config/           # local.example.yaml only; local.yaml ignored
+infrastructure/   # terraform + ansible (placeholders)
+services/         # custom images (e.g. platform-smoke)
+docs/             # public ADRs/architecture (sanitized)
+```

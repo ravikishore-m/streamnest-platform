@@ -1,0 +1,45 @@
+---
+- name: Bootstrap single-node k3s server
+  hosts: k3s
+  become: true
+  gather_facts: true
+  vars:
+    k3s_version: "" # empty = channel stable via get.k3s.io
+  tasks:
+    - name: Wait for apt lock
+      ansible.builtin.shell: |
+        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
+      changed_when: false
+
+    - name: Ensure prerequisites
+      ansible.builtin.apt:
+        name:
+          - curl
+          - ca-certificates
+          - open-iscsi
+          - nfs-common
+        state: present
+        update_cache: true
+
+    - name: Install k3s server (disable Traefik; use later ingress)
+      ansible.builtin.shell: |
+        set -euo pipefail
+        if command -v k3s >/dev/null 2>&1; then
+          k3s --version
+          exit 0
+        fi
+        curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --write-kubeconfig-mode 644" sh -
+      args:
+        creates: /usr/local/bin/k3s
+
+    - name: Wait for node Ready
+      ansible.builtin.command: kubectl get nodes --no-headers
+      register: nodes
+      until: nodes.stdout is search("Ready")
+      retries: 30
+      delay: 10
+      changed_when: false
+
+    - name: Show node status
+      ansible.builtin.debug:
+        var: nodes.stdout_lines

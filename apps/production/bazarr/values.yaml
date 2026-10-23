@@ -1,2 +1,0 @@
-# Production values for bazarr.
-# Promote ONLY the digest validated in staging. Do not auto-sync until Phase 12 gates pass.

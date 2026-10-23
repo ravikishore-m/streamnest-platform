@@ -24,12 +24,23 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
+# Site-specific / personal (never commit)
+config/local.yaml
+config/local.yml
+**/values.local.yaml
+**/hosts.local.yml
+**/terraform.tfvars
+!**/*.tfvars.example
+docs/private/**
+!docs/private/README.md
+scripts/local/
+.kube/
+**/k3s.yaml
+
 # Terraform
 .terraform/
 .terraform.lock.hcl
 .terraform.lock.hcl.bak
-*.tfvars
-!*.tfvars.example
 
 # Ansible
 *.retry
@@ -44,7 +55,7 @@ Thumbs.db
 *.swp
 *~
 
-# Runtime / media / logs (never commit)
+# Runtime / media / logs
 *.log
 logs/
 media/
@@ -56,7 +67,7 @@ Downloads/
 *.sqlite
 *.sqlite3
 
-# Build artifacts
+# Build
 dist/
 build/
 node_modules/
@@ -65,7 +76,6 @@ __pycache__/
 .venv/
 venv/
 
-# SBOMs / scan reports may be large; keep summaries only unless requested
+# Scan artifacts
 **/trivy-report.json
 **/syft-sbom.json
-./secrets.yaml

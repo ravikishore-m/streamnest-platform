@@ -1,29 +1,17 @@
-# Terraform — TrueNAS infrastructure
+# Terraform — NAS infrastructure
 
-Provider: [`truenas/truenas`](https://registry.terraform.io/providers/truenas/truenas) (TrueNAS 25.10+ / 26.0).
+Single environment: `environments/streamnest/`.
 
-## Rules
+## Privacy
 
-- **No apply** until Phase 3 approval.
-- Never auto-apply production from PRs.
-- Never commit state, plans, or API keys.
-- Rotate any cloud-init passwords before VM create/start (ADR D9).
+- Never commit API keys, state, plan files, or real pool/zvol/NIC names.  
+- Use `*.tfvars` locally (gitignored) from `terraform.tfvars.example`.  
+- First VM bring-up may be API/CLI; import before claiming Terraform management (ADR 0007).
 
-## Layout
-
-```text
-environments/staging/   # k3s-staging VM + datasets (idle-off)
-environments/production/# k3s-prod VM + datasets
-modules/vm/             # reusable VM + zvol + nic sketch
-```
-
-## Offline validation
+## Offline check
 
 ```bash
-cd environments/staging
+cd environments/streamnest
 terraform init -backend=false
 terraform validate
-terraform fmt -check -recursive ../..
 ```
-
-Live `terraform plan` requires `TRUENAS_API_KEY` + endpoint — create key manually on TrueNAS; do not store in Git.
