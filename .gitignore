@@ -2,6 +2,10 @@
 .env
 .env.*
 !.env.example
+secrets.yaml
+secrets.yml
+**/secrets.yaml
+**/secrets.yml
 **/secrets/
 !**/.gitkeep
 *.pem
@@ -64,3 +68,4 @@ venv/
 # SBOMs / scan reports may be large; keep summaries only unless requested
 **/trivy-report.json
 **/syft-sbom.json
+./secrets.yaml
