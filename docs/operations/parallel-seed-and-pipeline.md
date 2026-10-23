@@ -4,39 +4,48 @@
 
 **Live TrueNAS Apps are read-only sources.** Streamnest k8s apps get a **one-way replica** into `streamnest-seeds/`, then into PVCs. Nothing writes back to `configs/sonarr` (etc.) used by ix-* containers.
 
-## Flow
+## Single workflow: `.github/workflows/ci.yml`
 
-1. `scripts/replicate-nas-seeds.sh` — `rsync` live → seeds (excludes cache/transcodes/logs)  
-2. Pack seeds to `*.tgz`, serve briefly over HTTP on the NAS; `scripts/apply-seeds-to-k8s.sh` Jobs `wget` into the **config** PVC and set path URL bases on the **copy only**  
-3. Argo CD syncs charts/values from Git  
-4. CI `pipeline` / `scripts/ci-build-push-deploy.sh` — build custom images → push registry → hard-refresh Applications  
+| Job | Runner | When |
+|-----|--------|------|
+| `helm` / `terraform` / `secrets-hygiene` | `ubuntu-latest` (instant) | every push/PR |
+| `build-push` | `ubuntu-latest` → **GHCR** | push `main` / dispatch |
+| `argo-refresh` | self-hosted `streamnest` (optional) | after build; `continue-on-error` |
+| `nas-seeds` | self-hosted `streamnest` | dispatch flags only |
+
+### Official actions
+
+| Step | Action |
+|------|--------|
+| Checkout | `actions/checkout` |
+| Helm | `azure/setup-helm` |
+| Terraform | `hashicorp/setup-terraform` |
+| Registry login | `docker/login-action` (GHCR + `GITHUB_TOKEN`) |
+| Buildx | `docker/setup-buildx-action` |
+| Tags | `docker/metadata-action` |
+| Build + push | `docker/build-push-action` (GHA cache) |
+| kubectl (NAS jobs) | `azure/setup-kubectl` |
+
+Custom image: `ghcr.io/<owner>/streamnest-platform-smoke` (package must be public or the cluster needs a GHCR pull secret).
+
+## Seed flow (NAS)
+
+1. `scripts/replicate-nas-seeds.sh` — live → seeds  
+2. Pack `*.tgz`, HTTP serve; `scripts/apply-seeds-to-k8s.sh` → config PVCs  
 
 ## Secrets in Git
 
-- Plaintext `secrets.yaml` stays **gitignored**  
-- Tracked: `secrets/*.enc.yaml` (SOPS + age) — see `secrets/README.md`  
-- Apply: `scripts/apply-sops-secrets.sh` (regcred + Argo admin bcrypt)  
+- Plaintext gitignored; tracked `secrets/*.enc.yaml` (SOPS) — see `secrets/README.md`
 
 ## Argo admin roles
 
-Declarative under `platform/argocd/`:
+`platform/argocd/` — AppProject `streamnest`, RBAC groups, `/argocd` base path.
 
-- `AppProject` `streamnest` with `admin` / `readonly` roles  
-- `argocd-rbac-cm` groups: `streamnest-admins`, `streamnest-ops`, `streamnest-readonly`  
-- Path base `/argocd` via `argocd-cmd-params-cm`  
-
-Bootstrap once: `kubectl apply -f platform/argocd/` then sync `argocd-config`.
-
-## GitHub Actions secrets (self-hosted `streamnest` runner)
+## Optional GitHub Actions secrets (NAS jobs only)
 
 | Secret | Purpose |
 |--------|---------|
-| `STREAMNEST_REGISTRY` | `host:port` |
-| `STREAMNEST_REGISTRY_USER` | robot user |
-| `STREAMNEST_REGISTRY_PASSWORD` | robot password |
 | `STREAMNEST_NAS_CONFIG_ROOT` | live configs parent |
 | `STREAMNEST_NAS_SEED_ROOT` | seed parent |
-| `STREAMNEST_NAS_NFS_SERVER` | NAS IP/DNS for guest NFS |
+| `STREAMNEST_SEED_HTTP_BASE` | seed tarball HTTP base |
 | `STREAMNEST_KUBECTL` | optional kubectl wrapper |
-
-Workflow dispatch flags: `replicate_seeds`, `apply_seeds`.

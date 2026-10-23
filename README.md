@@ -31,11 +31,18 @@ secrets/          # SOPS-encrypted *.enc.yaml only
 config/           # local.example.yaml only; local.yaml ignored
 infrastructure/   # terraform + ansible (placeholders)
 services/         # custom images (e.g. platform-smoke)
-scripts/          # seed (read-only from live NAS Apps), CI deploy, SOPS apply
+scripts/          # seed (read-only from live NAS Apps), CI deploy fallback, SOPS apply
 docs/             # public ADRs/architecture (sanitized)
 ```
 
-## Pipeline
+## CI (single workflow)
 
-GitHub Actions `pipeline` (self-hosted `streamnest` runner): validate → build/push custom images → Argo refresh.  
-One-way config seed from live TrueNAS Apps is optional (`replicate_seeds` / `apply_seeds`) and **never writes** the original ix-* configs. See `docs/operations/parallel-seed-and-pipeline.md`.
+`.github/workflows/ci.yml` on **GitHub-hosted `ubuntu-latest`** (instant runners):
+
+1. Helm / Terraform / secrets hygiene (parallel)  
+2. Build + push `platform-smoke` to **GHCR** via official Docker actions  
+3. Pin image digest in `apps/platform-smoke/values.yaml` (Argo picks up via Git)  
+
+Optional NAS self-hosted steps (workflow_dispatch only): seed replicate/apply, Argo hard-refresh.
+
+See `docs/operations/parallel-seed-and-pipeline.md`.

@@ -1,0 +1,214 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      replicate_seeds:
+        description: "One-way replicate live NAS app configs → seeds (NAS runner; does not modify originals)"
+        type: boolean
+        default: false
+      apply_seeds:
+        description: "Apply seeds into k8s PVCs (NAS runner)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/streamnest-platform-smoke
+
+jobs:
+  helm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+      - name: Helm lint charts
+        run: |
+          set -euo pipefail
+          for c in charts/*; do
+            [ -f "$c/Chart.yaml" ] || continue
+            helm lint "$c"
+          done
+
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+      - name: Terraform fmt + validate
+        run: |
+          set -euo pipefail
+          terraform fmt -check -recursive infrastructure/terraform
+          cd infrastructure/terraform/environments/streamnest
+          terraform init -backend=false -input=false
+          terraform validate
+
+  secrets-hygiene:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Block plaintext secrets and private inventory
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.env$|(^|/)secrets\.ya?ml$|\.tfstate$|kubeconfig|(^|/)config/local\.ya?ml$|(^|/)config/local/age\.key$'; then
+            echo "Forbidden plaintext secret-like paths are tracked" >&2
+            exit 1
+          fi
+          for f in $(git ls-files 'secrets/*' 2>/dev/null || true); do
+            case "$f" in
+              secrets/README.md|secrets/*.example|*.enc.yaml|*.enc.yml) continue ;;
+            esac
+            if [[ "$f" == *.yaml || "$f" == *.yml ]] && ! grep -q 'sops:' "$f"; then
+              echo "Unencrypted file under secrets/: $f" >&2
+              exit 1
+            fi
+          done
+          if git grep -nE '192\.168\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+|100\.[0-9]+\.[0-9]+\.[0-9]+' \
+            -- '*.md' '*.yaml' '*.yml' '*.tf' '*.sh' ':!.github/**' ':!secrets/**' 2>/dev/null; then
+            echo "Private IP literals must not be committed" >&2
+            exit 1
+          fi
+
+  build-push:
+    needs: [helm, terraform, secrets-hygiene]
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+      tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=git-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: services/platform-smoke
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Pin image in GitOps values
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          TAG="git-${GITHUB_SHA::12}"
+          export TAG IMAGE_NAME DIGEST
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          Path("apps/platform-smoke/values.yaml").write_text(
+              "image:\n"
+              f"  repository: {os.environ['IMAGE_NAME']}\n"
+              f"  tag: \"{os.environ['TAG']}\"\n"
+              f"  digest: \"{os.environ['DIGEST']}\"\n"
+              "service:\n"
+              "  type: NodePort\n"
+              "  port: 9898\n"
+              "  nodePort: 30898\n"
+              "imagePullSecrets: []\n"
+          )
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/platform-smoke/values.yaml
+          if git diff --staged --quiet; then
+            echo "values unchanged"
+            exit 0
+          fi
+          git commit -m "chore(platform-smoke): pin ${TAG} [skip ci]"
+          git push
+
+  # Optional NAS-only ops (not on the hot path). Skipped unless requested.
+  nas-seeds:
+    needs: [helm, terraform, secrets-hygiene]
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.replicate_seeds || inputs.apply_seeds)
+    runs-on: [self-hosted, streamnest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Replicate seeds (read-only from live apps)
+        if: inputs.replicate_seeds
+        env:
+          NAS_CONFIG_ROOT: ${{ secrets.STREAMNEST_NAS_CONFIG_ROOT }}
+          NAS_SEED_ROOT: ${{ secrets.STREAMNEST_NAS_SEED_ROOT }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/replicate-nas-seeds.sh
+          ./scripts/replicate-nas-seeds.sh
+      - uses: azure/setup-kubectl@v4
+        if: inputs.apply_seeds
+        with:
+          version: v1.31.4
+      - name: Apply seeds to k8s
+        if: inputs.apply_seeds
+        env:
+          SEED_HTTP_BASE: ${{ secrets.STREAMNEST_SEED_HTTP_BASE }}
+          KUBECTL: ${{ secrets.STREAMNEST_KUBECTL }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/apply-seeds-to-k8s.sh
+          KUBECTL="${KUBECTL:-kubectl}" ./scripts/apply-seeds-to-k8s.sh
+
+  argo-refresh:
+    needs: build-push
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: [self-hosted, streamnest]
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.31.4
+      - name: Hard-refresh Argo Applications
+        env:
+          KUBECTL: ${{ secrets.STREAMNEST_KUBECTL }}
+        run: |
+          set -euo pipefail
+          KUBECTL="${KUBECTL:-kubectl}"
+          "$KUBECTL" apply -f platform/argocd/ || true
+          "$KUBECTL" -n argocd apply -f apps/root-app.yaml || true
+          for app in platform-smoke jellyfin sonarr radarr prowlarr bazarr qbittorrent seerr argocd-config; do
+            "$KUBECTL" -n argocd annotate application "$app" \
+              argocd.argoproj.io/refresh=hard --overwrite 2>/dev/null || true
+          done
