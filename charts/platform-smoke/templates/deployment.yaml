@@ -17,12 +17,16 @@ spec:
       containers:
         - name: smoke
           image: {{ include "platform-smoke.image" . }}
+          {{- with .Values.image.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.service.port }}
               name: http
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: {{ .Values.probePath | default "/healthz" }}
               port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

@@ -4,6 +4,9 @@ image:
   repository: ghcr.io/stefanprodan/podinfo
   tag: "6.7.1"
   digest: ""
+  args:
+    - --port=8080
+probePath: /healthz
 service:
   type: ClusterIP
   port: 8080
