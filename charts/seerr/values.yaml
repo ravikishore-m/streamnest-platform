@@ -7,7 +7,7 @@ service:
   type: NodePort
   port: 5055
   nodePort: 30055
-configMountPath: /config
+configMountPath: /app/config
 persistence:
   size: 5Gi
   storageClass: ""
