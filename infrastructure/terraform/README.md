@@ -65,6 +65,9 @@ operations. The VM and platform datasets have `prevent_destroy` safeguards.
 ## CI policy
 
 Pull requests may run formatting, initialization without a backend, validate,
-and a plan against an isolated test configuration. Production applies require
-a reviewed plan, protected environment approval, a protected runner with NAS
-reachability, and the NAS API credentials outside GitHub pull-request builds.
+and no live apply. A push to `main` may create a remote-state plan on the
+protected Linux NAS runner. Live apply is only available through manual
+workflow dispatch with the `apply` input enabled and an `infra-apply` GitHub
+environment approval. The runner must have NAS API and TrueNAS S3 reachability;
+GitHub-hosted runners are intentionally not used for this path. The workflow
+refuses delete actions and never exposes credentials to pull-request builds.

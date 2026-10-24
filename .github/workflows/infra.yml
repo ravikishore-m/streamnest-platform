@@ -29,6 +29,12 @@ on:
       - ".github/workflows/infra.yml"
       - ".github/workflows/secrets-hygiene.yml"
   workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply the reviewed Terraform plan to the NAS"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -56,3 +62,152 @@ jobs:
           cd infrastructure/terraform/environments/streamnest
           terraform init -backend=false -input=false
           terraform validate
+
+  plan:
+    name: Terraform plan (NAS runner)
+    needs: [terraform]
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: [self-hosted, linux, x64, streamnest-infra]
+    environment: infra-plan
+    permissions:
+      contents: read
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      TF_VAR_truenas_endpoint: ${{ secrets.TF_TRUENAS_ENDPOINT }}
+      TF_VAR_truenas_username: ${{ secrets.TF_TRUENAS_USERNAME }}
+      TF_VAR_truenas_api_key: ${{ secrets.TF_TRUENAS_API_KEY }}
+      TF_VAR_truenas_insecure: "false"
+      TF_VAR_pool_name: ${{ vars.TF_POOL_NAME }}
+      TF_VAR_platform_dataset_name: ${{ vars.TF_PLATFORM_DATASET_NAME }}
+      TF_VAR_vm_disk_name: ${{ vars.TF_VM_DISK_NAME }}
+      TF_VAR_vm_nic_attach: ${{ vars.TF_VM_NIC_ATTACH }}
+      TF_VAR_vm_name: ${{ vars.TF_VM_NAME }}
+      TF_VAR_vm_disk_size_bytes: ${{ vars.TF_VM_DISK_SIZE_BYTES }}
+      TF_VAR_vm_memory_bytes: ${{ vars.TF_VM_MEMORY_BYTES }}
+      TF_VAR_vm_vcpus: ${{ vars.TF_VM_VCPUS }}
+      TF_VAR_vm_cores: ${{ vars.TF_VM_CORES }}
+      TF_VAR_vm_threads: ${{ vars.TF_VM_THREADS }}
+      TF_VAR_vm_autostart: ${{ vars.TF_VM_AUTOSTART }}
+      TF_VAR_vm_running: ${{ vars.TF_VM_RUNNING }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+      - name: Materialize private backend configuration
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+          TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT }}
+          TRUENAS_CA_CERT_PEM: ${{ secrets.TF_TRUENAS_CA_CERT_PEM }}
+        run: |
+          set -euo pipefail
+          cd infrastructure/terraform/environments/streamnest
+          printf '%s\n' \
+            "bucket = \"${TF_STATE_BUCKET}\"" \
+            "key = \"${TF_STATE_KEY}\"" \
+            "region = \"local\"" \
+            "endpoints = { s3 = \"${TF_STATE_ENDPOINT}\" }" \
+            'use_path_style = true' \
+            'use_lockfile = true' \
+            'skip_region_validation = true' \
+            'skip_credentials_validation = true' \
+            'skip_requesting_account_id = true' \
+            'skip_metadata_api_check = true' > backend.hcl
+          if [ -n "${TRUENAS_CA_CERT_PEM}" ]; then
+            printf '%s' "${TRUENAS_CA_CERT_PEM}" > "${RUNNER_TEMP}/truenas-ca.pem"
+            echo "TF_VAR_truenas_ca_cert=${RUNNER_TEMP}/truenas-ca.pem" >> "${GITHUB_ENV}"
+          else
+            echo 'TF_VAR_truenas_ca_cert=' >> "${GITHUB_ENV}"
+          fi
+      - name: Terraform plan
+        run: |
+          set -euo pipefail
+          cd infrastructure/terraform/environments/streamnest
+          terraform init -backend-config=backend.hcl -input=false
+          terraform plan -lock-timeout=5m -input=false -out=streamnest.tfplan
+          delete_count="$(terraform show -json streamnest.tfplan | jq '[.resource_changes[]? | select(.change.actions | index("delete"))] | length')"
+          if [ "${delete_count}" -ne 0 ]; then
+            echo "Refusing plan containing ${delete_count} delete action(s). Review imports/replacements manually."
+            exit 1
+          fi
+          echo "Terraform plan completed with no delete actions."
+
+  apply:
+    name: Terraform apply (protected NAS path)
+    needs: [plan]
+    if: github.event_name == 'workflow_dispatch' && inputs.apply == true
+    runs-on: [self-hosted, linux, x64, streamnest-infra]
+    environment:
+      name: infra-apply
+    permissions:
+      contents: read
+    env:
+      TF_IN_AUTOMATION: "true"
+      TF_INPUT: "false"
+      AWS_ACCESS_KEY_ID: ${{ secrets.TF_STATE_ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_STATE_SECRET_KEY }}
+      TF_VAR_truenas_endpoint: ${{ secrets.TF_TRUENAS_ENDPOINT }}
+      TF_VAR_truenas_username: ${{ secrets.TF_TRUENAS_USERNAME }}
+      TF_VAR_truenas_api_key: ${{ secrets.TF_TRUENAS_API_KEY }}
+      TF_VAR_truenas_insecure: "false"
+      TF_VAR_pool_name: ${{ vars.TF_POOL_NAME }}
+      TF_VAR_platform_dataset_name: ${{ vars.TF_PLATFORM_DATASET_NAME }}
+      TF_VAR_vm_disk_name: ${{ vars.TF_VM_DISK_NAME }}
+      TF_VAR_vm_nic_attach: ${{ vars.TF_VM_NIC_ATTACH }}
+      TF_VAR_vm_name: ${{ vars.TF_VM_NAME }}
+      TF_VAR_vm_disk_size_bytes: ${{ vars.TF_VM_DISK_SIZE_BYTES }}
+      TF_VAR_vm_memory_bytes: ${{ vars.TF_VM_MEMORY_BYTES }}
+      TF_VAR_vm_vcpus: ${{ vars.TF_VM_VCPUS }}
+      TF_VAR_vm_cores: ${{ vars.TF_VM_CORES }}
+      TF_VAR_vm_threads: ${{ vars.TF_VM_THREADS }}
+      TF_VAR_vm_autostart: ${{ vars.TF_VM_AUTOSTART }}
+      TF_VAR_vm_running: ${{ vars.TF_VM_RUNNING }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+      - name: Materialize private backend configuration
+        env:
+          TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
+          TF_STATE_KEY: ${{ vars.TF_STATE_KEY }}
+          TF_STATE_ENDPOINT: ${{ vars.TF_STATE_ENDPOINT }}
+          TRUENAS_CA_CERT_PEM: ${{ secrets.TF_TRUENAS_CA_CERT_PEM }}
+        run: |
+          set -euo pipefail
+          cd infrastructure/terraform/environments/streamnest
+          printf '%s\n' \
+            "bucket = \"${TF_STATE_BUCKET}\"" \
+            "key = \"${TF_STATE_KEY}\"" \
+            "region = \"local\"" \
+            "endpoints = { s3 = \"${TF_STATE_ENDPOINT}\" }" \
+            'use_path_style = true' \
+            'use_lockfile = true' \
+            'skip_region_validation = true' \
+            'skip_credentials_validation = true' \
+            'skip_requesting_account_id = true' \
+            'skip_metadata_api_check = true' > backend.hcl
+          if [ -n "${TRUENAS_CA_CERT_PEM}" ]; then
+            printf '%s' "${TRUENAS_CA_CERT_PEM}" > "${RUNNER_TEMP}/truenas-ca.pem"
+            echo "TF_VAR_truenas_ca_cert=${RUNNER_TEMP}/truenas-ca.pem" >> "${GITHUB_ENV}"
+          else
+            echo 'TF_VAR_truenas_ca_cert=' >> "${GITHUB_ENV}"
+          fi
+      - name: Terraform apply reviewed plan
+        run: |
+          set -euo pipefail
+          cd infrastructure/terraform/environments/streamnest
+          terraform init -backend-config=backend.hcl -input=false
+          terraform plan -lock-timeout=5m -input=false -out=streamnest.tfplan
+          delete_count="$(terraform show -json streamnest.tfplan | jq '[.resource_changes[]? | select(.change.actions | index("delete"))] | length')"
+          if [ "${delete_count}" -ne 0 ]; then
+            echo "Refusing apply containing ${delete_count} delete action(s)."
+            exit 1
+          fi
+          terraform apply -input=false streamnest.tfplan

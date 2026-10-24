@@ -40,7 +40,7 @@ Use `config/local.example.yaml` → `config/local.yaml` (gitignored) and `docs/p
 
 ## CI
 
-- **`infra.yml`** — Terraform validate + secrets hygiene (infra paths only).
+- **`infra.yml`** — Terraform validation plus protected, manual NAS plan/apply.
 - **`apps.yml`** — Helm lint, GHCR build/push, values pin (app paths only).
 - **`floci-contract.yml`** — disposable AWS API compatibility checks only.
 
