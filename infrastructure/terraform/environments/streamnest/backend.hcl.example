@@ -1,0 +1,15 @@
+# Copy to backend.hcl (gitignored). This endpoint is the local TrueNAS S3
+# service, reached remotely by the operator or a protected CI runner.
+# Do not put access keys here; use AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+# in the process environment or protected runner secrets.
+bucket         = "terraform-state"
+key            = "streamnest/terraform.tfstate"
+region         = "local"
+endpoints      = { s3 = "https://TRUENAS_HOST_OR_TAILSCALE_NAME:9000" }
+use_path_style = true
+use_lockfile   = true
+
+skip_region_validation      = true
+skip_credentials_validation = true
+skip_requesting_account_id  = true
+skip_metadata_api_check     = true

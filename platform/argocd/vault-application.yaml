@@ -1,0 +1,88 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  labels:
+    app.kubernetes.io/part-of: streamnest-platform
+spec:
+  project: streamnest
+  source:
+    repoURL: https://helm.releases.hashicorp.com
+    chart: vault
+    targetRevision: 0.34.1
+    helm:
+      valuesObject:
+        global:
+          enabled: true
+          tlsDisable: false
+          externalVaultAddr: "https://vault.vault.svc:8200"
+        injector:
+          enabled: true
+          replicas: 1
+          agentDefaults:
+            cpuRequest: 50m
+            cpuLimit: 250m
+            memRequest: 64Mi
+            memLimit: 128Mi
+        server:
+          enabled: true
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          dataStorage:
+            enabled: true
+            size: 10Gi
+            storageClass: local-path
+          extraVolumes:
+            - type: secret
+              name: vault-server-tls
+              path: vault-tls
+          standalone:
+            enabled: true
+            config: |-
+              ui = true
+              disable_mlock = true
+              listener "tcp" {
+                tls_disable = 0
+                address = "[::]:8200"
+                cluster_address = "[::]:8201"
+                tls_cert_file = "/vault/userconfig/vault-tls/tls.crt"
+                tls_key_file = "/vault/userconfig/vault-tls/tls.key"
+                telemetry {
+                  unauthenticated_metrics_access = "true"
+                }
+              }
+              storage "file" {
+                path = "/vault/data"
+              }
+              service_registration "kubernetes" {}
+              telemetry {
+                prometheus_retention_time = "30s"
+                disable_hostname = true
+              }
+          readinessProbe:
+            enabled: true
+            path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+          livenessProbe:
+            enabled: true
+            path: "/v1/sys/health?standbyok=true&sealedcode=204&uninitcode=204"
+        ui:
+          enabled: true
+          serviceType: ClusterIP
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,4 +1,4 @@
-# Staging values for qbittorrent. Digests pinned in chart values; override here after scan.
+# Single-environment values for qBittorrent. Digest must be re-scanned before use.
 persistence:
   size: 5Gi
 

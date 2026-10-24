@@ -1,69 +1,88 @@
-# Provider is declared by calling environments. This module is validation/shape-only until Phase 3.
+resource "truenas_dataset" "platform" {
+  name        = var.platform_dataset_name
+  compression = "zstd"
+  atime       = "OFF"
+  share_type  = "GENERIC"
+  comments    = "Streamnest platform data managed by Terraform"
 
-variable "name" {
-  type        = string
-  description = "VM name"
-}
+  lifecycle {
+    prevent_destroy = true
 
-variable "description" {
-  type    = string
-  default = ""
-}
-
-variable "memory_bytes" {
-  type        = number
-  description = "Guest RAM in bytes"
-  validation {
-    condition     = var.memory_bytes >= 2147483648 && var.memory_bytes <= 17179869184
-    error_message = "memory_bytes must be between 2 GiB and 16 GiB for this host budget."
+    precondition {
+      condition     = startswith(var.platform_dataset_name, "${var.pool_name}/")
+      error_message = "platform_dataset_name must be below pool_name."
+    }
   }
 }
 
-variable "vcpus" {
-  type    = number
-  default = 1
+resource "truenas_zvol" "vm_disk" {
+  name        = var.vm_disk_name
+  volsize     = var.vm_disk_size_bytes
+  compression = "zstd"
+  sparse      = true
+  comments    = "Streamnest k3s VM disk managed by Terraform"
+
+  lifecycle {
+    prevent_destroy = true
+
+    precondition {
+      condition     = startswith(var.vm_disk_name, "${var.pool_name}/")
+      error_message = "vm_disk_name must be below pool_name."
+    }
+  }
 }
 
-variable "cores" {
-  type = number
+resource "truenas_vm" "k3s" {
+  name        = var.name
+  description = var.description
+  memory      = var.memory_bytes
+  vcpus       = var.vcpus
+  cores       = var.cores
+  threads     = var.threads
+  bootloader  = "UEFI"
+  cpu_mode    = "HOST-PASSTHROUGH"
+  autostart   = var.autostart
+  running     = var.running
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
-variable "threads" {
-  type    = number
-  default = 1
+resource "truenas_vm_device" "disk" {
+  vm = truenas_vm.k3s.id
+  attributes = jsonencode({
+    dtype = "DISK"
+    path  = "/dev/zvol/${truenas_zvol.vm_disk.name}"
+    type  = "VIRTIO"
+  })
+  order      = 1000
+  depends_on = [truenas_zvol.vm_disk]
 }
 
-variable "autostart" {
-  type    = bool
-  default = false
+resource "truenas_vm_device" "nic" {
+  vm = truenas_vm.k3s.id
+  attributes = jsonencode({
+    dtype      = "NIC"
+    type       = "VIRTIO"
+    nic_attach = var.nic_attach
+  })
+  order = 2000
 }
 
-variable "zvol_name" {
-  type        = string
-  description = "Existing or managed zvol full name (set via private tfvars; do not commit real paths)"
-}
+resource "truenas_periodic_snapshot_task" "platform" {
+  dataset        = truenas_dataset.platform.name
+  recursive      = true
+  lifetime_value = 14
+  lifetime_unit  = "DAY"
+  naming_schema  = "streamnest-%Y-%m-%d_%H-%M"
+  enabled        = true
 
-variable "nic_attach" {
-  type    = string
-  default = "enp4s0"
-}
-
-variable "running" {
-  type    = bool
-  default = false
-}
-
-# Concrete resource blocks are enabled in Phase 3 after API key + plan review.
-# This module documents the intended shape and input validation only until then.
-
-output "planned_name" {
-  value = var.name
-}
-
-output "planned_memory_bytes" {
-  value = var.memory_bytes
-}
-
-output "planned_autostart" {
-  value = var.autostart
+  schedule = {
+    minute = "15"
+    hour   = "2"
+    dom    = "*"
+    month  = "*"
+    dow    = "*"
+  }
 }

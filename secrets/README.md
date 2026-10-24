@@ -24,7 +24,16 @@ sops secrets/streamnest.enc.yaml   # edit in place
 ## Apply to cluster
 
 ```bash
-./scripts/apply-sops-secrets.sh
+# The supported bootstrap path is Ansible + the Kubernetes API. Keep the age
+# key outside Git and pass it only from the operator's local environment.
+cd infrastructure/ansible
+ansible-playbook -i inventories/streamnest/hosts.local.yml \
+  playbooks/platform-bootstrap.yml \
+  -e streamnest_repo_local_path=/path/to/Media_Streaming_Platform \
+  -e sops_age_key_file=/path/to/config/local/age.key
 ```
 
-Decrypts locally and creates/updates Kubernetes Secrets (registry pull, Argo admin bcrypt). Does not print secret values.
+The playbook creates or updates only the narrowly scoped cluster Secret needed
+by the configured secret integration and uses `no_log`. It does not print
+secret values. Vault is the long-term runtime secret authority; SOPS is kept
+for bootstrap material that must exist before Vault is initialized.

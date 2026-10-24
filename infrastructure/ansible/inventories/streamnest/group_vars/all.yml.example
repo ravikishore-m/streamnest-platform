@@ -1,0 +1,9 @@
+# Copy to group_vars/all.yml (gitignored) or set in hosts.local.yml.
+# No site IPs, paths, or credentials in the committed example.
+
+# Repo clone used by platform-bootstrap (Argo apply)
+streamnest_repo_url: "https://github.com/OWNER/streamnest-platform.git"
+streamnest_repo_revision: "main"
+
+# Age key for one-time cluster Secret (Path 2 secrets Job) — path on control machine only
+# sops_age_key_file: "/path/to/config/local/age.key"

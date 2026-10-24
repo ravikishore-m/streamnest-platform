@@ -1,6 +1,6 @@
 apiVersion: v2
 name: bazarr
-description: bazarr for Velora k8s platform (parallel staging track)
+description: Bazarr for the Streamnest single-environment Kubernetes platform
 type: application
 version: 0.1.0
 appVersion: "1.6.2"

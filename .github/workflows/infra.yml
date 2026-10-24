@@ -1,0 +1,58 @@
+name: infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infrastructure/**"
+      - "platform/argocd/**"
+      - "docs/operations/infra-path.md"
+      - "docs/operations/terraform-state-backend.md"
+      - "docs/operations/runbooks/argocd-bootstrap-and-recovery.md"
+      - "docs/operations/runbooks/vault-init-and-recovery.md"
+      - "docs/adr/0002-terraform-ansible-gitops-ownership.md"
+      - "docs/adr/0008-two-path-infra-then-apps.md"
+      - "docs/adr/0010-private-tls-and-public-ingress.md"
+      - ".github/workflows/infra.yml"
+      - ".github/workflows/secrets-hygiene.yml"
+  pull_request:
+    paths:
+      - "infrastructure/**"
+      - "platform/argocd/**"
+      - "docs/operations/infra-path.md"
+      - "docs/operations/terraform-state-backend.md"
+      - "docs/operations/runbooks/argocd-bootstrap-and-recovery.md"
+      - "docs/operations/runbooks/vault-init-and-recovery.md"
+      - "docs/adr/0002-terraform-ansible-gitops-ownership.md"
+      - "docs/adr/0008-two-path-infra-then-apps.md"
+      - "docs/adr/0010-private-tls-and-public-ingress.md"
+      - ".github/workflows/infra.yml"
+      - ".github/workflows/secrets-hygiene.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-hygiene:
+    uses: ./.github/workflows/secrets-hygiene.yml
+
+  terraform:
+    needs: [secrets-hygiene]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.0
+      - name: Terraform fmt + validate
+        run: |
+          set -euo pipefail
+          terraform fmt -check -recursive infrastructure/terraform
+          cd infrastructure/terraform/environments/streamnest
+          terraform init -backend=false -input=false
+          terraform validate

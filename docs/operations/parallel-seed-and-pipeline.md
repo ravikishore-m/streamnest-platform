@@ -1,51 +1,51 @@
-# Parallel seed + GitOps pipeline
+# Path 2 — Seeds and app CI
+
+**Path 2 only.** Complete [Path 1 — Infra](infra-path.md) before using this. See ADR 0008 / D14.
 
 ## Rule
 
-**Live TrueNAS Apps are read-only sources.** Streamnest k8s apps get a **one-way replica** into `streamnest-seeds/`, then into PVCs. Nothing writes back to `configs/sonarr` (etc.) used by ix-* containers.
+**Live TrueNAS Apps are read-only sources.** Streamnest k8s apps get a **one-way replica** into `streamnest-seeds/`, then into PVCs. Nothing writes back to live `configs/<app>` trees used by ix-* containers.
 
-## Single workflow: `.github/workflows/ci.yml`
+## Workflow: `.github/workflows/apps.yml`
 
 | Job | Runner | When |
 |-----|--------|------|
-| `helm` / `terraform` / `secrets-hygiene` | `ubuntu-latest` (instant) | every push/PR |
+| `helm` / `secrets-hygiene` | `ubuntu-latest` | push/PR touching app paths |
 | `build-push` | `ubuntu-latest` → **GHCR** | push `main` / dispatch |
-| `argo-refresh` | self-hosted `streamnest` (optional) | after build; `continue-on-error` |
-| `nas-seeds` | self-hosted `streamnest` | dispatch flags only |
+Infra CI is separate: `.github/workflows/infra.yml` (Terraform; no Docker build).
 
-### Official actions
+### Official actions (apps)
 
 | Step | Action |
 |------|--------|
 | Checkout | `actions/checkout` |
 | Helm | `azure/setup-helm` |
-| Terraform | `hashicorp/setup-terraform` |
 | Registry login | `docker/login-action` (GHCR + `GITHUB_TOKEN`) |
 | Buildx | `docker/setup-buildx-action` |
 | Tags | `docker/metadata-action` |
-| Build + push | `docker/build-push-action` (GHA cache) |
-| kubectl (NAS jobs) | `azure/setup-kubectl` |
+| Build + push | `docker/build-push-action` |
 
-Custom image: `ghcr.io/<owner>/streamnest-platform-smoke` (package must be public or the cluster needs a GHCR pull secret).
+Custom image: `ghcr.io/<owner>/streamnest-platform-smoke` (public package or cluster pull secret).
 
-## Seed flow (NAS)
+## Seed flow (deferred and controlled)
 
-1. `scripts/replicate-nas-seeds.sh` — live → seeds  
-2. Pack `*.tgz`, HTTP serve; `scripts/apply-seeds-to-k8s.sh` → config PVCs  
+The seed copy is intentionally not an operational shell script. When enabled,
+it must be implemented as a reviewed Kubernetes Job or Ansible task with a
+read-only source mount, an explicit allowlist of source directories, checksum
+evidence, a bounded destination, and a dry-run/restore test. It must never
+write to the live TrueNAS Apps configuration tree and must never copy cache or
+runtime databases without an approved application-specific procedure.
 
-## Secrets in Git
+Until that Job or playbook is reviewed and tested, applications start with
+empty dedicated PVCs. This document does not claim that live configuration has
+been migrated.
 
-- Plaintext gitignored; tracked `secrets/*.enc.yaml` (SOPS) — see `secrets/README.md`
+## Secrets
 
-## Argo admin roles
+Plaintext gitignored; tracked `secrets/*.enc.yaml` (SOPS) — see `secrets/README.md`.
 
-`platform/argocd/` — AppProject `streamnest`, RBAC groups, `/argocd` base path.
+## Operator-only inputs
 
-## Optional GitHub Actions secrets (NAS jobs only)
-
-| Secret | Purpose |
-|--------|---------|
-| `STREAMNEST_NAS_CONFIG_ROOT` | live configs parent |
-| `STREAMNEST_NAS_SEED_ROOT` | seed parent |
-| `STREAMNEST_SEED_HTTP_BASE` | seed tarball HTTP base |
-| `STREAMNEST_KUBECTL` | optional kubectl wrapper |
+Any source path, export, hostname, token, or kubeconfig belongs in ignored
+local inventory or the approved secret store. Do not add NAS paths or private
+network values to workflow variables or repository documentation.

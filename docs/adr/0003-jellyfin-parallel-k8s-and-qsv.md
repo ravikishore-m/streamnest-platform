@@ -22,4 +22,5 @@ Two instances may exist during validation (NAS + k8s) with distinct endpoints. C
 
 ## Security
 
-Separate secrets. Staging-equivalent controls: least privilege, RO media where practical. No site inventory in Git.
+Separate secrets. Validation controls are least privilege and read-only media
+where practical. No site inventory in Git.

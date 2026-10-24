@@ -18,6 +18,8 @@ TrueNAS 26.0 exposes VM/dataset APIs; official Terraform provider `truenas/truen
 
 Do not let Terraform and Ansible manage the same resource. Do not use `kubectl apply` as the normal production path after GitOps exists.
 
+Delivery order is **infra then apps** (two paths, one PR = one path) — see ADR 0008 / D14.
+
 ## Consequences
 
 - Clear blast radius and review surfaces.  

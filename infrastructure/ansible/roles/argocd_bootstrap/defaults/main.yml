@@ -1,0 +1,16 @@
+---
+argocd_namespace: argocd
+argocd_version: "v3.5.6"
+argocd_install_url: "https://raw.githubusercontent.com/argoproj/argo-cd/{{ argocd_version }}/manifests/install.yaml"
+streamnest_repo_url: "https://github.com/OWNER/streamnest-platform.git"
+streamnest_repo_revision: "main"
+k3s_kubeconfig: "/etc/rancher/k3s/k3s.yaml"
+# The checkout is on the guest so kubernetes.core can apply files with the
+# guest's kubeconfig. Override with a private local path only for an offline
+# bootstrap.
+streamnest_repo_checkout_path: "/var/lib/rancher/k3s/streamnest-platform"
+# Optional local checkout of this repo on the control node for offline bootstrap.
+streamnest_repo_local_path: ""
+# Optional: path to age private key on control node → creates Secret sops-age for Path 2
+sops_age_key_file: ""
+kubeconfig_fetch_path: ""

@@ -2,7 +2,8 @@
 
 ## Physical
 
-Single NAS host running TrueNAS with a dedicated Linux VM for k3s. **Not physically highly available.** Hardware and addressing details are private.
+Single NAS host running TrueNAS with a dedicated Linux VM for k3s. **Not
+physically highly available.** Hardware and addressing details are private.
 
 ## Logical
 
@@ -14,8 +15,9 @@ flowchart TB
     Media[(Media_Pool)]
     SSD[(Config_SSD_Pool)]
     Backup[(Backup_Pool)]
-    subgraph vm [k3s_VM_streamnest]
+    subgraph vm [dedicated_Linux_VM]
       K3S[k3s_single_node]
+      OCI[OCI_containers]
     end
   end
 
@@ -27,6 +29,7 @@ flowchart TB
   LiveJF --> Media
   LiveArr --> Media
   Apps --> K3S
+  K3S --> OCI
   Charts --> Apps
   Backup -.->|planned_replication| SSD
 ```
@@ -36,4 +39,6 @@ flowchart TB
 1. Platform: VM → k3s → Argo CD → Vault → observability  
 2. Apps: Helm charts for Jellyfin and related services on the single cluster  
 
-Live NAS Apps serve users until cutover approval.
+The existing TrueNAS Apps (including live Jellyfin) remain untouched during
+parallel validation. k3s workloads are OCI containers running inside the
+dedicated VM on the NAS; they are not duplicated as native TrueNAS Apps.

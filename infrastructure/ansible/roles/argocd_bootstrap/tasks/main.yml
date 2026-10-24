@@ -1,0 +1,147 @@
+---
+- name: Ensure Kubernetes Python client is available
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.python.version.major | int >= 3
+    fail_msg: "The k3s guest must provide Python 3 for kubernetes.core."
+
+- name: Install Git for the pinned GitOps checkout
+  ansible.builtin.package:
+    name: git
+    state: present
+
+- name: Require an operator-supplied Git repository URL
+  ansible.builtin.assert:
+    that:
+      - >-
+        streamnest_repo_local_path | length > 0 or
+        streamnest_repo_url is not search("OWNER")
+    fail_msg: >-
+      Set streamnest_repo_url in ignored inventory or -e unless using a local
+      checkout. The committed example intentionally contains no personal or
+      site-specific identity.
+
+- name: Checkout the reviewed GitOps revision on the guest
+  when: streamnest_repo_local_path | length == 0
+  ansible.builtin.git:
+    repo: "{{ streamnest_repo_url }}"
+    version: "{{ streamnest_repo_revision }}"
+    dest: "{{ streamnest_repo_checkout_path }}"
+    depth: 1
+    update: true
+    force: false
+
+- name: Create the temporary manifest directories
+  ansible.builtin.file:
+    path: "{{ streamnest_repo_checkout_path }}/{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - platform/argocd
+    - apps
+
+- name: Copy platform manifests from the local checkout for offline bootstrap
+  when: streamnest_repo_local_path | length > 0
+  ansible.builtin.copy:
+    src: "{{ streamnest_repo_local_path }}/platform/argocd/"
+    dest: "{{ streamnest_repo_checkout_path }}/platform/argocd/"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Copy application root from the local checkout for offline bootstrap
+  when: streamnest_repo_local_path | length > 0
+  ansible.builtin.copy:
+    src: "{{ streamnest_repo_local_path }}/apps/root-app.yaml"
+    dest: "{{ streamnest_repo_checkout_path }}/apps/root-app.yaml"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Create Argo CD namespace
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ argocd_namespace }}"
+    state: present
+    kubeconfig: "{{ k3s_kubeconfig }}"
+
+- name: Download pinned Argo CD installation manifest
+  ansible.builtin.get_url:
+    url: "{{ argocd_install_url }}"
+    dest: /var/lib/rancher/k3s/server/streamnest-argocd-install.yaml
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+  register: argocd_manifest
+
+- name: Install pinned Argo CD manifest with Kubernetes API
+  kubernetes.core.k8s:
+    src: /var/lib/rancher/k3s/server/streamnest-argocd-install.yaml
+    state: present
+    apply: true
+    kubeconfig: "{{ k3s_kubeconfig }}"
+
+- name: Wait for Argo CD server deployment
+  kubernetes.core.k8s:
+    api_version: apps/v1
+    kind: Deployment
+    name: argocd-server
+    namespace: "{{ argocd_namespace }}"
+    state: present
+    wait: true
+    wait_condition:
+      type: Available
+      status: "True"
+    wait_timeout: 300
+    kubeconfig: "{{ k3s_kubeconfig }}"
+
+- name: Apply Argo CD project and platform configuration
+  kubernetes.core.k8s:
+    src: "{{ streamnest_repo_checkout_path }}/{{ item }}"
+    state: present
+    apply: true
+    kubeconfig: "{{ k3s_kubeconfig }}"
+  loop:
+    - platform/argocd/project.yaml
+    - platform/argocd/cmd-params-cm.yaml
+    - platform/argocd/rbac-cm.yaml
+    - platform/argocd/platform-root.yaml
+    - platform/argocd/cert-manager-application.yaml
+    - platform/argocd/vault-tls.yaml
+    - platform/argocd/vault-application.yaml
+
+- name: Apply the application root through Argo CD
+  kubernetes.core.k8s:
+    src: "{{ streamnest_repo_checkout_path }}/apps/root-app.yaml"
+    state: present
+    apply: true
+    kubeconfig: "{{ k3s_kubeconfig }}"
+
+- name: Create or update the SOPS age key Secret without logging its value
+  when: sops_age_key_file | length > 0
+  no_log: true
+  kubernetes.core.k8s:
+    state: present
+    apply: true
+    kubeconfig: "{{ k3s_kubeconfig }}"
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: sops-age
+        namespace: argocd
+      type: Opaque
+      stringData:
+        age.key: "{{ lookup('ansible.builtin.file', sops_age_key_file) }}"
+
+- name: Fetch kubeconfig for operators without exposing it in task output
+  when: kubeconfig_fetch_path | length > 0
+  no_log: true
+  ansible.builtin.fetch:
+    src: "{{ k3s_kubeconfig }}"
+    dest: "{{ kubeconfig_fetch_path }}"
+    flat: true

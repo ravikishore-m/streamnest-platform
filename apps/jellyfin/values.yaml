@@ -1,4 +1,9 @@
 # Local NFS overrides belong in values.local.yaml (gitignored), not here.
+# The digest is the official multi-architecture Jellyfin 12.3 image; scan it
+# again in CI before enabling the parallel workload.
+image:
+  tag: "12.3"
+  digest: "sha256:2038fe038ab3876a80f6e7b7e0aef6607b032c7dc0c9b3ad3296d0b2eba3bbb"
 media:
   enabled: false
   readOnly: true

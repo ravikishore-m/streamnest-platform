@@ -1,4 +1,4 @@
-# Staging values for bazarr. Digests pinned in chart values; override here after scan.
+# Single-environment values for Bazarr. Digest must be set after CI scan.
 persistence:
   size: 5Gi
 

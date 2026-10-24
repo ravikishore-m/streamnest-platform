@@ -1,0 +1,144 @@
+name: apps
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "charts/**"
+      - "services/**"
+      - "docs/architecture/container-image-inventory.md"
+      - "docs/operations/parallel-seed-and-pipeline.md"
+      - ".github/workflows/apps.yml"
+      - ".github/workflows/secrets-hygiene.yml"
+  pull_request:
+    paths:
+      - "apps/**"
+      - "charts/**"
+      - "services/**"
+      - "docs/architecture/container-image-inventory.md"
+      - "docs/operations/parallel-seed-and-pipeline.md"
+      - ".github/workflows/apps.yml"
+      - ".github/workflows/secrets-hygiene.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/streamnest-platform-smoke
+
+jobs:
+  secrets-hygiene:
+    uses: ./.github/workflows/secrets-hygiene.yml
+
+  helm:
+    needs: [secrets-hygiene]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+      - name: Helm lint charts
+        run: |
+          set -euo pipefail
+          for c in charts/*; do
+            [ -f "$c/Chart.yaml" ] || continue
+            helm lint "$c"
+          done
+
+  build-push:
+    name: build-push platform-smoke → GHCR
+    needs: [helm]
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=git-,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: services/platform-smoke
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      - name: Pin image in GitOps values (Argo auto-syncs main)
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          TAG="git-${GITHUB_SHA::12}"
+          export TAG IMAGE_NAME DIGEST
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          Path("apps/platform-smoke/values.yaml").write_text(
+              "image:\n"
+              f"  repository: {os.environ['IMAGE_NAME']}\n"
+              f"  tag: \"{os.environ['TAG']}\"\n"
+              f"  digest: \"{os.environ['DIGEST']}\"\n"
+              "service:\n"
+              "  type: NodePort\n"
+              "  port: 9898\n"
+              "  nodePort: 30898\n"
+              "imagePullSecrets: []\n"
+          )
+          PY
+          {
+            echo "## platform-smoke build"
+            echo "- image: \`${IMAGE_NAME}:${TAG}\`"
+            echo "- digest: \`${DIGEST}\`"
+            echo "- Argo app \`platform-smoke\` auto-syncs from \`main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/platform-smoke/values.yaml
+          if git diff --staged --quiet; then
+            echo "values unchanged"
+            exit 0
+          fi
+          git commit -m "chore(platform-smoke): pin ${TAG} [skip ci]"
+          git push
+

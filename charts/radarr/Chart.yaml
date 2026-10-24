@@ -1,6 +1,6 @@
 apiVersion: v2
 name: radarr
-description: radarr for Velora k8s platform (parallel staging track)
+description: Radarr for the Streamnest single-environment Kubernetes platform
 type: application
 version: 0.1.0
 appVersion: "6.4.4.10685"

@@ -1,3 +1,20 @@
-# Copy to terraform.tfvars (gitignored)
-zvol_name  = "CONFIG_POOL/vms/streamnest-disk"
-nic_attach = "NIC_OR_BRIDGE"
+# Copy to terraform.tfvars (gitignored) and replace placeholders locally.
+truenas_endpoint = "wss://TRUENAS_HOST_OR_TAILSCALE_NAME/api/current"
+truenas_username = "TERRAFORM_SERVICE_ACCOUNT"
+truenas_api_key  = "SET_OUTSIDE_GIT"
+truenas_ca_cert  = "/private/path/to/truenas-ca.pem"
+truenas_insecure = false
+
+pool_name             = "POOL_NAME"
+platform_dataset_name = "POOL_NAME/streamnest/platform"
+vm_disk_name          = "POOL_NAME/vms/streamnest"
+vm_nic_attach         = "BRIDGE_OR_INTERFACE"
+vm_disk_size_bytes    = 107374182400 # 100 GiB; reduce after private capacity check
+vm_memory_bytes       = 8589934592   # 8 GiB; do not allocate all host RAM
+vm_vcpus              = 1
+vm_cores              = 4
+vm_threads            = 1
+vm_autostart          = true
+
+# First apply false to create/adopt the stopped VM and attach devices.
+vm_running = false

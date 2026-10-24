@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argocd-config
+  name: streamnest-platform
   namespace: argocd
   labels:
-    env: streamnest
-    app: argocd-config
+    app.kubernetes.io/part-of: streamnest
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
-  # Uses default until platform/argocd AppProject exists; pipeline applies project first.
-  project: default
+  project: streamnest
   source:
     repoURL: https://github.com/ravikishore-m/streamnest-platform.git
     targetRevision: main

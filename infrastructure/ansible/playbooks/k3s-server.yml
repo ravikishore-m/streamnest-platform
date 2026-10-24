@@ -4,33 +4,40 @@
   become: true
   gather_facts: true
   vars:
-    k3s_version: "" # empty = channel stable via get.k3s.io
+    # Pin the approved stable release. Override with -e only after compatibility
+    # testing against the selected Argo/cert-manager versions.
+    k3s_version: "v1.37.1+k3s1"
   tasks:
-    - name: Wait for apt lock
-      ansible.builtin.shell: |
-        while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 5; done
-      changed_when: false
-
     - name: Ensure prerequisites
       ansible.builtin.apt:
         name:
           - curl
           - ca-certificates
+          - git
           - open-iscsi
           - nfs-common
         state: present
         update_cache: true
+      register: prerequisites
+      retries: 5
+      delay: 10
+      until: prerequisites is succeeded
 
-    - name: Install k3s server (disable Traefik; use later ingress)
-      ansible.builtin.shell: |
-        set -euo pipefail
-        if command -v k3s >/dev/null 2>&1; then
-          k3s --version
-          exit 0
-        fi
-        curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --disable traefik --write-kubeconfig-mode 644" sh -
+    - name: Download the reviewed k3s installer
+      ansible.builtin.get_url:
+        url: https://get.k3s.io
+        dest: /usr/local/sbin/streamnest-k3s-install
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install pinned k3s server (disable Traefik; use later ingress)
+      ansible.builtin.command: /usr/local/sbin/streamnest-k3s-install
       args:
         creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_VERSION: "{{ k3s_version }}"
+        INSTALL_K3S_EXEC: "server --disable traefik --write-kubeconfig-mode 644"
 
     - name: Wait for node Ready
       ansible.builtin.command: kubectl get nodes --no-headers

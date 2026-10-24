@@ -1,11 +1,9 @@
-# Scripts
+# Path tooling
 
-| Script | Where | Purpose |
-|--------|-------|---------|
-| `replicate-nas-seeds.sh` | NAS | One-way live TrueNAS Apps configs → `streamnest-seeds/` (never writes live) |
-| `apply-seeds-to-k8s.sh` | NAS + kubectl | Seed NFS → k8s PVCs |
-| `apply-sops-secrets.sh` | ops machine | Decrypt SOPS → regcred + Argo admin hash |
-| `ci-build-push-deploy.sh` | NAS fallback | Argo refresh (+ optional seeds); CI is `.github/workflows/ci.yml` on `ubuntu-latest` → GHCR |
-| `nas-build-platform-smoke.sh` | NAS | Smoke image only |
+Operational shell scripts were removed by ADR 0009.
 
-Site paths/IPs via env or `config/local.yaml` — not committed.
+Path 1 uses Terraform and Ansible. Path 2 uses GitHub Actions and Argo CD.
+Secrets are delivered through the approved in-cluster SOPS/Vault path and
+application configuration is reconciled from Git. Keep operator-only
+inventory and credentials under ignored local configuration or the documented
+secret store.

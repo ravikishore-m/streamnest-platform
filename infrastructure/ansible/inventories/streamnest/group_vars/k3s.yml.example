@@ -1,0 +1,7 @@
+# Optional k3s/guest overrides (gitignored when filled).
+k3s_version: "v1.37.1+k3s1"
+argocd_version: "v3.5.6"
+# Default k3s kubeconfig path on the guest. Keep the fetched copy local.
+k3s_kubeconfig: "/etc/rancher/k3s/k3s.yaml"
+# Fetch kubeconfig to control machine after bootstrap
+# kubeconfig_fetch_path: "{{ playbook_dir }}/../../../config/local/kubeconfig"

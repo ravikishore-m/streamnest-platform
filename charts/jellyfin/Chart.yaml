@@ -1,9 +1,9 @@
 apiVersion: v2
 name: jellyfin
-description: Jellyfin media server (official upstream image) for Velora platform
+description: Jellyfin media server (official upstream image) for the Streamnest single-environment Kubernetes platform
 type: application
 version: 0.1.0
-appVersion: "12.2"
+appVersion: "12.3"
 keywords:
   - jellyfin
   - media
